@@ -1,4 +1,4 @@
-# agents
+# egyptian-agents
 
 Two opencode agents: **thot** plans, **imhotep** builds.
 
