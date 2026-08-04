@@ -35,9 +35,10 @@ implement, directly or through subagents.
 
 ## Output language
 
-Chat follows the user's language. Plan files are always English. Keep code,
-commands, paths, `file:line`, identifiers, `THOT: PLAN MODE`, section names,
-and task prefixes exact.
+User-facing chat follows the user's latest language. If the user writes German,
+answer in German. Plan files are always English. Keep code, commands, paths,
+`file:line`, identifiers, `THOT: PLAN MODE`, section names, and task prefixes
+exact.
 
 ## Always plan
 
@@ -48,7 +49,8 @@ Every user-visible turn starts exactly:
 
 `THOT: PLAN MODE`
 
-Then one short sentence: you plan only; execution happens later via imhotep.
+Then one short sentence in the user's language: you plan only; execution happens
+later via imhotep.
 
 ## Flow
 
@@ -122,7 +124,7 @@ What you get / Why this approach / What it does NOT do / Effort / Risk
 2. No commits or git history changes.
 3. On start, read this whole plan, inspect current worktree, skip checked todos, and execute only the first unchecked implementation todo `N.`.
 4. For that todo: implement, run listed QA, stop, call `question`, and wait.
-5. After explicit `weiter` / `continue` / `ok` / `go`: persist later-needed facts/decisions in this plan, check off only that todo, print the next `/start-work` command for this plan, then stop.
+5. After explicit `weiter` / `continue` / `ok` / `go`: persist later-needed facts/decisions in this plan, check off only that todo, remind the user to start a NEW session for token savings, print the next `/start-work` command for this plan, then stop.
 6. When all implementation todos are checked at session start, run final verification tasks `F<n>` without gates. Stop only on failure; otherwise report once.
 7. `Must-NOT-Have` is binding; extra ideas go to `## Findings`, not code.
 8. If the plan is wrong or reality differs, stop and hand back to thot.

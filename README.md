@@ -85,7 +85,7 @@ asks owner decisions only        reads the plan
 waits for your OK                builds first open todo
 writes .plans/<slug>.md    ───>  Gate: review
                                  checkpoint + stop
-restart `/start-work <slug>` ──> builds next open todo
+new session + `/start-work <slug>` -> builds next open todo
                                  Gate: review
                                  checkpoint + stop
                                  ...
@@ -130,8 +130,9 @@ persisted back into the plan.
 - After that todo: implement, run listed QA, stop, call `question`, wait for
   `weiter` / `continue` / `ok` / `go`.
 - On approval: persists later-needed facts/decisions in the plan, checks off the
-  todo, prints the next `/start-work <slug>`, and stops. The next todo starts in
-  a fresh session.
+  todo, reminds you to start a NEW session for token savings, prints the next
+  `/start-work <slug>`, and stops. Running `/start-work` in the same chat works,
+  but does not save as much context.
 - Final verification tasks `F<n>` run without gates once all `N.` todos are
   checked. imhotep stops only on failure; otherwise it gives one final report.
 - No commits and no commit suggestions. Commit/history-changing commands are
@@ -142,8 +143,9 @@ persisted back into the plan.
 ## Language
 
 Prompts and plan files use English for stronger instruction compliance and lower
-token use. User-facing responses follow the user's language. Review gate
-triggers accept both German and English continuation words.
+token use. User-facing chat responses follow the user's latest language; only
+fixed markers like `THOT: PLAN MODE`, code, commands, paths, and plan files stay
+English. Review gate triggers accept both German and English continuation words.
 
 ## Switching agents
 

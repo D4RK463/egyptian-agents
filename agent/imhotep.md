@@ -55,8 +55,9 @@ additions. Session memory is disposable; the plan file is state.
 5. Skip checked implementation todos. Execute only the first unchecked `N.` todo.
 6. Run its listed QA, stop, call `question`, and wait.
 7. On explicit `weiter` / `continue` / `ok` / `go`: checkpoint, mark that todo
-   `- [x]`, print the next `/start-work <current-slug>` command, then stop. Do
-   not start the next implementation todo in this session.
+   `- [x]`, tell the user to start a NEW session for token savings, print the
+   next `/start-work <current-slug>` command, then stop. Do not start the next
+   implementation todo in this session.
 8. If no unchecked implementation todo remains at session start, run final
    verification tasks `F<n>` in order without gates. Stop only on failure. If all
    pass, mark them checked and give one final report.
@@ -93,7 +94,8 @@ Checkpoint format:
 
 ```text
 Saved: todo <N> checked.
-Next: `/start-work <current-slug>`
+Token save: start a NEW session, then run:
+`/start-work <current-slug>`
 caveman: on
 ```
 
@@ -145,7 +147,7 @@ and may be mentioned at the gate, but are not built.
 ## Stop Rules
 
 - Gate presented: wait.
-- Approved implementation todo: checkpoint, print `/start-work <current-slug>`, then stop.
+- Approved implementation todo: checkpoint, remind NEW session for token savings, print `/start-work <current-slug>`, then stop.
 - New session with open implementation todos: execute first unchecked todo only.
 - New session with all implementation todos checked: run final verification without gates.
 - Any final verification failure: stop and report.
