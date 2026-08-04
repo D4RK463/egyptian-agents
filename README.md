@@ -8,23 +8,22 @@ subagent orchestration, team mode, and dual review.
 
 ## Prerequisites
 
-Both agents assume the following is already installed in opencode. Nothing
-here is bundled by `install.sh`.
+Both agents assume these optional/required pieces already exist in opencode.
+`install.sh` only links the files from this repo.
 
 ### Skills
 
 | Skill | Used by | Why | Required |
 |---|---|---|---|
-| `caveman` | imhotep | Mandatory first action of every session and of `/start-work`. Every user-facing output is caveman-terse. | yes |
-| `caveman-commit` | imhotep | Generates the commit message in the review gate's commit suggestion. | recommended — without it imhotep writes the Conventional Commit subject itself |
+| `caveman` | imhotep | Loaded before plan execution. Gates, errors, and final reports stay terse. | yes |
 
-Install them under `~/.config/opencode/skills/<name>/SKILL.md`.
+Install skills under `~/.config/opencode/skills/<name>/SKILL.md`.
 
 ### MCP servers
 
 | Server | Used by | Why | Required |
 |---|---|---|---|
-| `context7` | thot | Library, framework, SDK, and CLI research during exploration: `resolve-library-id` then `query-docs`. Rule: never answer from memory. | yes for external dependencies, otherwise optional |
+| `context7` | thot | Current docs for libraries/frameworks/SDKs/CLIs: `resolve-library-id` then `query-docs`. | yes for external dependencies |
 
 Example `~/.config/opencode/opencode.json`:
 
@@ -49,20 +48,15 @@ authenticated (`opencode auth login`):
 | Agent | Model |
 |---|---|
 | thot | `github-copilot/claude-opus-5` |
-| imhotep | `github-copilot/gpt-5.6-sol` |
+| imhotep | `github-copilot/gpt-5.6-terra` |
 
-Different provider? Change the `model:` field in `agent/thot.md` and
-`agent/imhotep.md`.
+Different provider? Change `model:` in `agent/thot.md` and `agent/imhotep.md`.
 
 ### CLI tools
 
-thot's bash allowlist grants `rg` and `fd` without a prompt. Both are optional;
-`grep` is a sufficient fallback. Missing tools do not break anything, but
-exploration gets slower because every alternative command triggers an `ask`
-prompt.
-
-The built-in `explore` subagent is used via `task(subagent_type="explore")` —
-part of opencode, no installation required.
+thot allows `rg`, `fd`, `find`, `head`, `tail`, `sed -n`, `wc`, and read-only
+`git` commands without a prompt. `cat` is intentionally not allowlisted to avoid
+large accidental dumps.
 
 ## Installation
 
@@ -79,67 +73,77 @@ Creates symlinks:
 
 Idempotent. Aborts if a target exists and is not a matching symlink.
 
-**Restart opencode afterwards** — the configuration is only loaded at startup.
+Restart opencode afterwards; config is loaded at startup.
 
 ## Workflow
 
-```
-  Agent: thot                      Agent: imhotep
-  ───────────                      ──────────────
-  explores                         loads caveman
-  asks (owner decisions only)      reads the plan
-  waits for your OK                builds todo 1
-  writes .plans/<slug>.md    ───>  Gate: review
-                                   builds todo 2
-                                   Gate: review
-                                   ...
-                                   Final verification
+```text
+Agent: thot                      Agent: imhotep
+───────────                      ──────────────
+explores                         loads caveman
+asks owner decisions only        reads the plan
+waits for your OK                builds first open todo
+writes .plans/<slug>.md    ───>  Gate: review
+                                 checkpoint + stop
+restart `/start-work <slug>` ──> builds next open todo
+                                 Gate: review
+                                 checkpoint + stop
+                                 ...
+restart after all N. done ─────> final verification without gates
+                                 final report
 ```
 
-The plan file is the only interface. No shared context. That is why the plan
-must be **decision-complete**: imhotep makes no decisions.
+Use:
 
-```
+```text
 switch agent to thot, describe the task
-  ...
+...
 switch agent to imhotep (tab or ctrl+x, then a)
 /start-work <slug>
 ```
+
+The plan file is the only interface and state store. Sessions are disposable.
+That is why plans must be decision-complete and later-needed facts/decisions are
+persisted back into the plan.
 
 ## thot — Planner
 
 `claude-opus-5`
 
-- Explores first, asks later. Evidence with `file:line`.
-- **Two filters** before every question: answerable through exploration → find
-  out yourself. Answerable through a defensible default → default and log it.
-  What remains are owner decisions: irreversible, security-critical, data
-  schema, public API, new dependency.
-- **Approval gate.** Approval only authorizes writing the plan, never
-  execution.
+- Plans only; never implements.
+- Hard-enforced edit scope: `.plans/**` only.
+- Explores before asking and cites findings with `file:line`.
+- Uses Context7 for external API/library details.
+- Asks only owner decisions: irreversible/security-critical choices, public API
+  or config, data/schema, new dependencies, packaging, migrations.
+- Requires an approval brief before writing the plan.
 - Plan mode is sticky: "do X" means "plan X".
-
-With thot active, hard-enforced `permission.edit` allows `.plans/**`
-exclusively; under that condition, thot *cannot* change production code.
 
 ## imhotep — Worker
 
-`gpt-5.6-sol`
+`gpt-5.6-terra`
 
-- **caveman skill** as the first mandatory action of every session.
-- **Review gate after every todo.** Implement → QA → stop → `question` with
-  diff, QA evidence, commit suggestion, and the options
-  continue/rework/stop. Only after "continue" is it checked off.
-- **No commits.** Blocked via `permission.bash`: `commit`, `push`, `merge`,
-  `rebase`, `reset`, `tag`, `revert`, `cherry-pick`, `gh pr create|merge`.
-  Allowed: `status`, `diff`, `add`, `log`, `stash`.
-- Escalates instead of improvising: plan wrong → stop, back to thot.
+- Verifies it is the active agent before reading or writing.
+- Loads `caveman` before plan execution; output stays terse.
+- On each `/start-work`, skips checked todos and executes only the first open
+  implementation todo `N.`.
+- After that todo: implement, run listed QA, stop, call `question`, wait for
+  `weiter` / `continue` / `ok` / `go`.
+- On approval: persists later-needed facts/decisions in the plan, checks off the
+  todo, prints the next `/start-work <slug>`, and stops. The next todo starts in
+  a fresh session.
+- Final verification tasks `F<n>` run without gates once all `N.` todos are
+  checked. imhotep stops only on failure; otherwise it gives one final report.
+- No commits and no commit suggestions. Commit/history-changing commands are
+  blocked via `permission.bash`.
+- If the plan is wrong, imhotep stops and hands back to thot instead of
+  improvising.
 
 ## Language
 
-Prompts and plan files use English for stronger instruction compliance, lower
-token usage, and later compaction. User-facing responses follow the user's
-language. Review gate triggers accept both `weiter` and `continue`.
+Prompts and plan files use English for stronger instruction compliance and lower
+token use. User-facing responses follow the user's language. Review gate
+triggers accept both German and English continuation words.
 
 ## Switching agents
 
@@ -152,16 +156,16 @@ the command prompt runs under the currently active agent.
 | Select | Press `ctrl+x`, then `a` (`agent_list`) |
 | New session | Run `opencode --agent imhotep` |
 
-Without switching, `/start-work` runs with thot's permissions. Identity guards
-in imhotep and the command abort before plan execution.
+Without switching, `/start-work` can run with thot's permissions. Identity
+guards in imhotep and the command abort before plan execution.
 
 ## Plan format
 
 `.plans/<slug>.md`
 
-```
+```text
 ## TL;DR
-## Execution rules      <- verbatim in every plan, anchor after compaction
+## Execution rules      <- copied into every plan
 ## Scope                In / Out / Must-NOT-Have
 ## Findings             facts with file:line
 ## Decisions            decision + rationale + rejected alternative
@@ -170,31 +174,34 @@ in imhotep and the command abort before plan execution.
 ## Success criteria
 ```
 
-Task lines sit at column 0 and follow exactly `- [ ] N.` or `- [ ] F<n>.`
-— imhotep checks off precisely those lines.
+Task lines must be exactly `- [ ] N.` or `- [ ] F<n>.` at column 0. Target 5–8
+implementation todos. Implementation and test are one todo.
 
-Target range 5–8 todos. Implementation and test are one todo. The worker stops
-after every todo, so cut review-sized units instead of micro steps.
+Current execution rule summary:
+
+1. Load `caveman` first.
+2. No commits or history changes.
+3. Each session executes only the first unchecked implementation todo `N.`.
+4. Gate after that todo, then checkpoint and stop on approval.
+5. Final verification `F<n>` runs without gates unless it fails.
+6. `Must-NOT-Have` is binding.
+7. Plan wrong or reality differs: stop and return to thot.
 
 ## What is hard-enforced
 
 | Mechanism | Enforcement |
 |---|---|
-| `permission.edit`, `permission.bash` | **hard when the matching agent is active** — harness blocks the tool call |
+| `permission.edit`, `permission.bash` | hard when the matching agent is active |
 | `question` blocks the turn | hard |
 | `model`, `temperature` | hard |
-| caveman requirement, step gate, scope guard | soft — model self-binding |
+| caveman style, step gate, fresh-session flow, scope guard, final-verification flow | soft model instruction |
 | `## Execution rules` in the plan | soft, but survives compaction |
 
-The commit lock is real. The rest is discipline, not a guarantee — that is why
-the rules are stated twice: in the prompt and in every plan file.
+The commit lock is real. The rest is discipline, not a guarantee, so the core
+rules live both in the agent prompt and every plan.
 
 ## Deliberately omitted
 
-Team mode, dual review (`momus` + `oracle`), `metis` gap analysis,
-SHA256 round contracts, draft state, scaffold script, category routing,
-lifecycle hooks. Those are omo's answers to multi-agent parallelism — with two
-sequential agents they only cost prompt budget.
-
-Known trade-off: no second pair of eyes on the plan. Planning mistakes only
-surface at the step gate, when the code is already written.
+Team mode, dual review, separate plan review agents, SHA256 round contracts,
+draft state, scaffold script, category routing, and lifecycle hooks. With two
+sequential agents they mostly cost prompt budget.
