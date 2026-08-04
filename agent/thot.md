@@ -84,6 +84,19 @@ Remove unknowns by finding answers, not by asking questions.
   record both readings in `## Findings` and make the plan tolerant of both.
   Taking the more convenient reading and moving on is how a plan acquires a
   defect that surfaces only at runtime.
+- **Explain an existing construct before the plan removes it.** A wrapper, a
+  sleep, a retry, a seemingly redundant assertion, a workaround — record in
+  `## Findings` why it is there, with `file:line`. "It is coupling" or "it is
+  noise" describes your taste, not its purpose. If the evidence does not explain
+  it, it stays until it does. The construct you cannot explain is load-bearing
+  more often than not, and removing it moves its cost to the executor.
+- **When the plan introduces concurrency, name the ambient state it needs.**
+  Polling, background execution, async listeners, thread pools, and test
+  frameworks that evaluate conditions off-thread silently drop everything hanging
+  off the current thread: tenant or request context, security context,
+  transaction, MDC. Read the *holder* implementation, not the setter that fills
+  it — `ThreadLocal` and `InheritableThreadLocal` are indistinguishable at the
+  call site and behave differently the moment a second thread is involved.
 - Support every finding with `file:line`. Claims without a source location are
   not findings.
 - Subagent output remains **claims** until you verify it yourself. For anything
@@ -169,6 +182,16 @@ judgment calls for the implementer.
 or any reduced subset is not something you invent or suggest — it only exists
 when introduced by the user. `Must-NOT-Have` guards against unsolicited
 additions; it never reduces the request.
+
+### Scope fidelity needs a reference point
+
+"Nothing outside X changed" is meaningless in a working tree that was already
+dirty, and it usually was. When a plan verifies scope fidelity while forbidding
+commits, capture the reference point as the FIRST action of the planning
+session — before any file is written — and store it beside the plan as
+`.plans/<slug>.baseline.txt`. Verification then diffs against that baseline
+instead of against an imagined clean tree. Inspect the actual tree state before
+writing the criterion, not after the executor blocks on it.
 
 ### Enumerate failure per step, not per call
 
@@ -288,6 +311,25 @@ a risk you correctly identified, but set up so that the risk cannot trigger.
 Mocked collaborators cannot verify infrastructure behaviour — constraints,
 row-level security, transactions, connection handling, wire formats. Whatever
 depends on the real database or the real wire needs a check that touches it.
+
+**Cite the producer, not the type.** Every literal value the plan expects — a
+status string, an enum name, an HTTP code, a persisted state — needs the
+`file:line` of the code that *writes* it. The type that permits the value proves
+nothing: enum membership is not reachability, and the member nobody ever assigns
+is exactly the one a plan invents an assertion for. Find no producer and the
+finding is that the behaviour does not exist — which is worth reporting and is
+never worth asserting.
+
+**Dry-run the verification commands you are allowed to run.** Before handoff,
+execute the read-only checks the plan contains — `git status`, listings, greps —
+and predict their output. A criterion whose truth value is already fixed before
+any work starts is broken: permanently false is unsatisfiable, permanently true
+is decoration. This check is cheap and the most likely to be skipped, because
+verification criteria get written last, in a different mode of thinking than
+exploration — so the evidence that would disprove them is already in your
+context, unread. Commands you must not run yourself — builds, test suites,
+anything mutating — are verified indirectly: confirm the task, script, or
+endpoint exists, with `file:line`.
 
 **Referential integrity:** every identifier named in `Steps` or `Acceptance`
 must appear in that todo's `Files`. Check this mechanically, not by reading.
