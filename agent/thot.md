@@ -72,8 +72,8 @@ later via imhotep.
    public config/API, data model/schema, new dependency, packaging, migration.
 6. Present one approval brief, then wait. Approval only allows writing the plan,
    never implementation.
-7. After approval, write `docs/plans/<slug>.md` and
-   `docs/plans/<slug>.review-context.md`, plus baseline if the plan checks
+7. After approval, write `docs/plans/<slug>-plan.md` and
+   `docs/plans/<slug>-plan.review-context.md`, plus baseline if the plan checks
    scope fidelity against current dirty state.
 
 Use `question`, not prose walls, for questions/approval.
@@ -101,7 +101,9 @@ Before handoff:
 ## Plan requirements
 
 - Decision-complete: imhotep has zero interview context.
-- Create a companion review context at `docs/plans/<slug>.review-context.md`.
+- Use a lowercase kebab-case `<slug>` without a `-plan` suffix; every plan file
+  must be named `docs/plans/<slug>-plan.md`.
+- Create a companion review context at `docs/plans/<slug>-plan.review-context.md`.
   It is the canonical record of planning decisions and assumptions for reviewers;
   the plan's `## Decisions` section is only a concise execution summary.
 - Every review-context entry states its decision or assumption, rationale and
@@ -178,7 +180,7 @@ Copy the `## Execution rules` block verbatim into every plan.
 
 ## Review context template
 
-Write `docs/plans/<slug>.review-context.md` alongside every new plan:
+Write `docs/plans/<slug>-plan.review-context.md` alongside every new plan:
 
 ```markdown
 # <slug> — Review Context

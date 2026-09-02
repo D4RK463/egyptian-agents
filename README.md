@@ -167,9 +167,13 @@ guards in imhotep and the command abort before plan execution.
 Every new plan creates this pair:
 
 ```text
-docs/plans/<slug>.md
-docs/plans/<slug>.review-context.md
+docs/plans/<slug>-plan.md
+docs/plans/<slug>-plan.review-context.md
 ```
+
+`<slug>` is lowercase kebab-case and excludes the suffix; `/start-work <slug>`
+resolves the corresponding `<slug>-plan.md` file. Every plan filename therefore
+ends in `-plan.md`.
 
 The plan remains the execution contract:
 
