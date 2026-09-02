@@ -111,7 +111,7 @@ facts/decisions are persisted back into those files.
 `claude-opus-5`
 
 - Plans only; never implements.
-- Hard-enforced edit scope: `.docs/plans/**` only.
+- Hard-enforced edit scope: `docs/plans/**` only.
 - Explores before asking and cites findings with `file:line`.
 - Uses Context7 for external API/library details.
 - Asks only owner decisions: irreversible/security-critical choices, public API
@@ -167,8 +167,8 @@ guards in imhotep and the command abort before plan execution.
 Every new plan creates this pair:
 
 ```text
-.docs/plans/<slug>.md
-.docs/plans/<slug>.review-context.md
+docs/plans/<slug>.md
+docs/plans/<slug>.review-context.md
 ```
 
 The plan remains the execution contract:

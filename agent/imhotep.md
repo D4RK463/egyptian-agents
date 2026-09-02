@@ -1,5 +1,5 @@
 ---
-description: Executes one plan step from .docs/plans/<slug>.md, using its review context when present; checkpoints, then stops. Never commits, replans, or expands scope.
+description: Executes one plan step from docs/plans/<slug>.md, using its review context when present; checkpoints, then stops. Never commits, replans, or expands scope.
 mode: primary
 model: github-copilot/gpt-5.6-terra
 temperature: 0.1
@@ -46,9 +46,9 @@ additions. Session memory is disposable; the plan file is state.
 
 ## Flow
 
-1. Read the whole `.docs/plans/<slug>.md`. If no slug or missing file: list
-   `.docs/plans/` and ask. Do not guess. Also read
-   `.docs/plans/<slug>.review-context.md` when it exists; plans created before
+1. Read the whole `docs/plans/<slug>.md`. If no slug or missing file: list
+   `docs/plans/` and ask. Do not guess. Also read
+   `docs/plans/<slug>.review-context.md` when it exists; plans created before
    this convention may not have one.
 2. Read Scope, Must-NOT-Have, Findings, Decisions, checked todos, unchecked
    todos, `## Execution rules`, and the review-context decisions/assumptions.

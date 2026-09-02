@@ -1,9 +1,9 @@
 ---
-description: Resume .docs/plans/<slug>.md with imhotep.
+description: Resume docs/plans/<slug>.md with imhotep.
 agent: imhotep
 ---
 
-Resume `.docs/plans/$1.md`. Also read `.docs/plans/$1.review-context.md` when it exists; it is required review context for new plans, but may be absent for older plans.
+Resume `docs/plans/$1.md`. Also read `docs/plans/$1.review-context.md` when it exists; it is required review context for new plans, but may be absent for older plans.
 
 If the active agent is not Imhotep, stop before reading or writing and tell the
 user to switch with `tab` or `ctrl+x` then `a`, or start
