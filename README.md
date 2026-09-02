@@ -83,7 +83,7 @@ Agent: thot                      Agent: imhotep
 explores                         loads caveman
 asks owner decisions only        reads the plan
 waits for your OK                builds first open todo
-writes .plans/<slug>.md    ───>  Gate: review
+writes plan + review context     ───>  Gate: review
                                  checkpoint + stop
 new session + `/start-work <slug>` -> builds next open todo
                                  Gate: review
@@ -102,21 +102,22 @@ switch agent to imhotep (tab or ctrl+x, then a)
 /start-work <slug>
 ```
 
-The plan file is the only interface and state store. Sessions are disposable.
-That is why plans must be decision-complete and later-needed facts/decisions are
-persisted back into the plan.
+The plan and its review context are the only interface and state store. Sessions
+are disposable. That is why plans must be decision-complete, and later-needed
+facts/decisions are persisted back into those files.
 
 ## thot — Planner
 
 `claude-opus-5`
 
 - Plans only; never implements.
-- Hard-enforced edit scope: `.plans/**` only.
+- Hard-enforced edit scope: `.docs/plans/**` only.
 - Explores before asking and cites findings with `file:line`.
 - Uses Context7 for external API/library details.
 - Asks only owner decisions: irreversible/security-critical choices, public API
   or config, data/schema, new dependencies, packaging, migrations.
-- Requires an approval brief before writing the plan.
+- Requires an approval brief before writing the plan and review context.
+- Records every planning decision and assumption separately for future reviews.
 - Plan mode is sticky: "do X" means "plan X".
 
 ## imhotep — Worker
@@ -129,9 +130,9 @@ persisted back into the plan.
   implementation todo `N.`.
 - After that todo: implement, run listed QA, stop, call `question`, wait for
   `weiter` / `continue` / `ok` / `go`.
-- On approval: persists later-needed facts/decisions in the plan, checks off the
-  todo, reminds you to start a NEW session for token savings, prints the next
-  `/start-work <slug>`, and stops. Running `/start-work` in the same chat works,
+- On approval: persists later-needed facts/decisions in the plan and review
+  context, checks off the todo, reminds you to start a NEW session for token
+  savings, prints the next `/start-work <slug>`, and stops. Running `/start-work` in the same chat works,
   but does not save as much context.
 - Final verification tasks `F<n>` run without gates once all `N.` todos are
   checked. imhotep stops only on failure; otherwise it gives one final report.
@@ -161,20 +162,34 @@ the command prompt runs under the currently active agent.
 Without switching, `/start-work` can run with thot's permissions. Identity
 guards in imhotep and the command abort before plan execution.
 
-## Plan format
+## Plan and review-context format
 
-`.plans/<slug>.md`
+Every new plan creates this pair:
+
+```text
+.docs/plans/<slug>.md
+.docs/plans/<slug>.review-context.md
+```
+
+The plan remains the execution contract:
 
 ```text
 ## TL;DR
 ## Execution rules      <- copied into every plan
 ## Scope                In / Out / Must-NOT-Have
 ## Findings             facts with file:line
-## Decisions            decision + rationale + rejected alternative
+## Decisions            concise summary with D<n> references
 ## Todos                - [ ] N.  at column 0
 ## Final verification   - [ ] F<n>.  at column 0
 ## Success criteria
 ```
+
+The review context is the canonical decision/assumption record for reviewers.
+Each `D<n>` entry records its status (`confirmed`, `assumption-to-verify`, or
+`superseded`), rationale, evidence, rejected alternatives, and constraints or
+validity. A reviewer must read it before proposing changes and may reverse a
+recorded decision only with new, concrete evidence. Older plans may not have a
+review-context file.
 
 Task lines must be exactly `- [ ] N.` or `- [ ] F<n>.` at column 0. Target 5–8
 implementation todos. Implementation and test are one todo.

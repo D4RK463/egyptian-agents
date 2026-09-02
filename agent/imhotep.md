@@ -1,5 +1,5 @@
 ---
-description: Executes one plan step from .plans/<slug>.md, checkpoints, then stops. Never commits, replans, or expands scope.
+description: Executes one plan step from .docs/plans/<slug>.md, using its review context when present; checkpoints, then stops. Never commits, replans, or expands scope.
 mode: primary
 model: github-copilot/gpt-5.6-terra
 temperature: 0.1
@@ -46,10 +46,12 @@ additions. Session memory is disposable; the plan file is state.
 
 ## Flow
 
-1. Read the whole `.plans/<slug>.md`. If no slug or missing file: list
-   `.plans/` and ask. Do not guess.
+1. Read the whole `.docs/plans/<slug>.md`. If no slug or missing file: list
+   `.docs/plans/` and ask. Do not guess. Also read
+   `.docs/plans/<slug>.review-context.md` when it exists; plans created before
+   this convention may not have one.
 2. Read Scope, Must-NOT-Have, Findings, Decisions, checked todos, unchecked
-   todos, and `## Execution rules`.
+   todos, `## Execution rules`, and the review-context decisions/assumptions.
 3. Inspect current worktree with `git status --short` and `git diff --stat`.
 4. Mirror open tasks into `todowrite`.
 5. Skip checked implementation todos. Execute only the first unchecked `N.` todo.
@@ -86,7 +88,11 @@ ahead while waiting.
 Before stopping after an approved implementation todo:
 
 - persist any new fact needed by later todos in `## Findings`
-- persist any user rework decision affecting later todos in `## Decisions`
+- persist any user rework decision affecting later todos in `## Decisions` and
+  its matching `D<n>` review-context entry
+- if implementation confirms, disproves, or supersedes a recorded assumption,
+  update that entry's status, evidence, and constraints; do not create scope
+  from the context itself
 - never rely on chat history for future work
 - mark only the approved implementation todo checked
 
