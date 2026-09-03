@@ -17,15 +17,15 @@ Both agents assume these optional/required pieces already exist in opencode.
 |---|---|---|---|
 | `caveman` | imhotep | Loaded before plan execution. Gates, errors, and final reports stay terse. | yes |
 
-Install skills under `~/.config/opencode/skills/<name>/SKILL.md`.
+Install skills under `~/.agents/skills/<name>/SKILL.md`.
 
 ### MCP servers
 
 | Server | Used by | Why | Required |
 |---|---|---|---|
-| `context7` | thot | Current docs for libraries/frameworks/SDKs/CLIs: `resolve-library-id` then `query-docs`. | yes for external dependencies |
+| `context7` | thot | Current docs for libraries/frameworks/SDKs/CLIs: `context7_resolve-library-id` then `context7_query-docs`. | yes for external dependencies |
 
-Example `~/.config/opencode/opencode.json`:
+Required installation in `~/.config/opencode/opencode.json`:
 
 ```json
 {
@@ -34,8 +34,13 @@ Example `~/.config/opencode/opencode.json`:
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
-      "enabled": true
+      "headers": {
+        "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"
+      }
     }
+  },
+  "permission": {
+    "context7_*": "deny"
   }
 }
 ```
@@ -54,9 +59,9 @@ Different provider? Change `model:` in `agent/thot.md` and `agent/imhotep.md`.
 
 ### CLI tools
 
-thot allows `rg`, `fd`, `find`, `head`, `tail`, `sed -n`, `wc`, and read-only
-`git` commands without a prompt. `cat` is intentionally not allowlisted to avoid
-large accidental dumps.
+thot allowlist contains `rg`, `fd`, `find`, `head`, `tail`, `sed -n`, `wc`, and
+read-only `git` commands. `rg` may be absent; use `git grep` or `grep` portably.
+`cat` is intentionally not allowlisted to avoid large accidental dumps.
 
 ## Installation
 

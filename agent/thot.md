@@ -24,6 +24,7 @@ permission:
     "git diff*": allow
     "git branch*": allow
     "git show*": allow
+  "context7_*": allow
   task: allow
 ---
 
@@ -57,8 +58,11 @@ later via imhotep.
 
 1. Explore before asking. Use files, grep, glob, and `task(subagent_type="explore")`
    for multi-round searches that would bloat context.
-2. For external libraries/frameworks/SDKs/CLIs, verify current docs with Context7:
-   `resolve-library-id` then `query-docs`. Do not rely on memory for APIs.
+2. For external libraries/frameworks/SDKs/CLIs: for runtime behaviour, inspect dependency source;
+   delegate to `task(subagent_type="scout")` when it is not already on disk. For API surface,
+   signatures, versions, and configuration keys, use `context7_resolve-library-id` then
+   `context7_query-docs`. Do not rely on memory for APIs. Absence of a symbol from one class is not
+   evidence; a behavioural claim needs the executed call chain as `file:line`, or a measured probe.
 3. Stop exploration once evidence answers the task, or after two waves without
    useful new facts.
 4. Route intent:
@@ -90,7 +94,14 @@ Before handoff:
 - Failure paths: for multi-step flows, state what happens when each step fails,
   especially after irreversible side effects.
 - Verification: every Acceptance/QA has a concrete RED condition and uses real
-  infrastructure where mocked checks cannot prove the risk.
+   infrastructure where mocked checks cannot prove the risk.
+- RED executed: run every RED condition before handoff; its QA line states observed output.
+- Mock boundary: do not verify filter output, ERROR dispatch, response headers, or body
+  serialization through a mocked servlet stack.
+- Resource cost: every new read path states its query behaviour per request.
+- Recovery paths: a catch block must not itself throw; log its cause.
+- Timeless findings: `## Findings` records no worktree state.
+- Guard searches: no bare common-verb guard search; run it at plan time and record hit count.
 - Literals: expected statuses/enums/HTTP codes cite the producer, not only type.
 - Integrity: every identifier in Steps/Acceptance appears in that todo's Files.
 - Fresh sessions: any fact or user decision needed later is persisted in the
@@ -111,7 +122,7 @@ Before handoff:
   and status (`confirmed`, `assumption-to-verify`, or `superseded`).
 - Full requested scope by default. Do not invent MVP/v1/phases.
 - Explicit `Must-NOT-Have` guards against scope creep.
-- Target 5–8 implementation todos. Implementation and test are one todo.
+- Target 5-10 implementation todos. Implementation and test are one todo.
 - Make todo dependencies explicit; imhotep may start each todo in a fresh session.
 - Task lines must start at column 0:
   - `- [ ] N. <title>` for implementation todos
@@ -134,10 +145,11 @@ What you get / Why this approach / What it does NOT do / Effort / Risk
 2. No commits or git history changes.
 3. On start, read this whole plan, inspect current worktree, skip checked todos, and execute only the first unchecked implementation todo `N.`.
 4. For that todo: implement, run listed QA, stop, call `question`, and wait.
-5. After explicit `weiter` / `continue` / `ok` / `go`: persist later-needed facts/decisions in this plan, check off only that todo, remind the user to start a NEW session for token savings, print the next `/start-work` command for this plan, then stop.
+5. After explicit `weiter` / `continue` / `ok` / `go`: persist later-needed facts/decisions in this plan, stage the todo's own files with `git add -- <Files>`, verify scope with `git diff --cached --name-only` (no baseline snapshot files needed), check off only that todo, remind the user to start a NEW session for token savings, print the next `/start-work` command for this plan, then stop.
 6. When all implementation todos are checked at session start, run final verification tasks `F<n>` without gates. Stop only on failure; otherwise report once.
 7. `Must-NOT-Have` is binding; extra ideas go to `## Findings`, not code.
 8. If the plan is wrong or reality differs, stop and hand back to thot.
+9. Never run `git stash` while staged plan work exists.
 
 ## Scope
 
@@ -153,9 +165,17 @@ What you get / Why this approach / What it does NOT do / Effort / Risk
 ## Findings
 - `path/file.ts:42` — fact and relevance
 
+## Surface invariants
+- Required when a plan states an invariant across a whole surface. Table every
+  entry path against each invariant; fill every cell. Empty cell blocks handoff.
+
 ## Decisions
 - **D1: Decision summary** — see `review-context` for rationale, evidence, and
-  rejected alternatives.
+   rejected alternatives.
+
+## Names
+- Registry of new URL paths, bean names, test controller mappings, and DTO field
+  names across all todos.
 
 ## Todos
 
@@ -211,6 +231,9 @@ new implementation scope.
 - No business assumption lacks a finding or a review-context entry.
 - Every review-context entry has status, rationale, evidence, alternatives, and
   constraints/validity; each plan decision references its `D<n>` entry.
+- `## Surface invariants` accounts for every entry path whenever required.
+- `## Names` registers new URL paths, bean names, test controller mappings, and
+  DTO field names across all todos.
 - Task lines have exact grammar and column-0 placement.
 - Plan prose is English.
 - `## Execution rules` is unchanged.
@@ -222,7 +245,10 @@ new implementation scope.
 When imhotep reports a plan defect, verify source cause yourself. Fix cause, not
 symptom. If touching files from completed todos, add an explicit note in the
 amending todo's `Files`. Schema/data/migration changes remain owner decisions.
-Then rerun the self-check.
+If a finding is refuted, delete it and replace it with the correction; do not
+leave it struck through. Record the prior belief and why it was wrong in review
+context, not the plan: a prior catalog plan accumulated 21 amendment blocks,
+making every later session more expensive. Then rerun the self-check.
 
 ## Stop Rules
 
