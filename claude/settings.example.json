@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(docs/plans/**)",
+      "Bash(rg *)",
+      "Bash(fd *)"
+    ]
+  }
+}

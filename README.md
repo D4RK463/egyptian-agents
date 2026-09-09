@@ -1,6 +1,6 @@
 # egyptian-agents
 
-Two opencode agents: **thot** plans, **imhotep** builds.
+Thot plans in opencode or Claude Code; Imhotep builds in opencode.
 
 Modeled on the planner/worker split of
 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), but without
@@ -45,6 +45,14 @@ Required installation in `~/.config/opencode/opencode.json`:
 }
 ```
 
+#### Claude Code
+
+Register context7 manually; `install.sh` does not run this command:
+
+```bash
+claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
+```
+
 ### Models
 
 Both agents pin their model. The `github-copilot` provider must be
@@ -56,12 +64,18 @@ authenticated (`opencode auth login`):
 | imhotep | `github-copilot/gpt-5.6-terra` |
 
 Different provider? Change `model:` in `agent/thot.md` and `agent/imhotep.md`.
+The Claude Code Thot variant pins `model: opus` and runs on the Anthropic
+subscription; opencode agents remain on `github-copilot`.
 
 ### CLI tools
 
 thot allowlist contains `rg`, `fd`, `find`, `head`, `tail`, `sed -n`, `wc`, and
 read-only `git` commands. `rg` may be absent; use `git grep` or `grep` portably.
 `cat` is intentionally not allowlisted to avoid large accidental dumps.
+
+Claude Code auto-approves its built-in read-only Bash set. Only `rg` and `fd`
+need explicit allow rules. `cat` is auto-approved there, although opencode
+withholds it.
 
 ## Installation
 
@@ -75,12 +89,22 @@ Creates symlinks:
 |---|---|
 | `agent/` | `~/.config/opencode/agent` |
 | `command/start-work.md` | `~/.config/opencode/command(s)/start-work.md` |
+| `claude/agents/thot.md` | `~/.claude/agents/thot.md` |
+
+Claude Code step is skipped when `~/.claude` is absent. Paste
+`claude/settings.example.json` into `~/.claude/settings.json` manually;
+`install.sh` never writes that file.
+Start Claude Code planning with `claude --agent thot` after installation.
 
 Idempotent. Aborts if a target exists and is not a matching symlink.
 
 Restart opencode afterwards; config is loaded at startup.
 
 ## Workflow
+
+Cross-tool path: plan with `claude --agent thot`, then execute in opencode with
+`opencode --agent imhotep` and `/start-work <slug>`. Plan pair in `docs/plans/`
+is the only interface.
 
 ```text
 Agent: thot                      Agent: imhotep
@@ -124,6 +148,20 @@ facts/decisions are persisted back into those files.
 - Requires an approval brief before writing the plan and review context.
 - Records every planning decision and assumption separately for future reviews.
 - Plan mode is sticky: "do X" means "plan X".
+
+## Claude Code variant
+
+`claude/agents/thot.md` is a second, independently maintained Thot prompt.
+Edit it with `agent/thot.md` on every prompt change; no generator or shared body
+keeps them synchronized.
+
+Prompt deltas: Claude Code uses `Agent` and `Explore` instead of
+`task(subagent_type=...)`; it has no `scout`; it uses `mcp__context7__*` tool
+names and `AskUserQuestion` instead of `question`; its frontmatter has no
+`mode` or `temperature`.
+
+The `## Execution rules` block in generated plans stays opencode-flavoured on
+purpose. Imhotep executes it in opencode.
 
 ## imhotep — Worker
 
@@ -217,9 +255,11 @@ Current execution rule summary:
 
 | Mechanism | Enforcement |
 |---|---|
-| `permission.edit`, `permission.bash` | hard when the matching agent is active |
-| `question` blocks the turn | hard |
-| `model`, `temperature` | hard |
+| opencode `permission.edit`, `permission.bash` | hard when matching agent is active |
+| Claude Code edit scope | soft: `Edit(docs/plans/**)` is allowed; all other edits are ask-by-default, not denied |
+| opencode `question` blocks the turn | hard |
+| Claude Code `AskUserQuestion` blocks the turn | unverified; text brief plus end-of-turn remains fallback |
+| model, temperature | hard where agent runtime supports them |
 | caveman style, step gate, fresh-session flow, scope guard, final-verification flow | soft model instruction |
 | `## Execution rules` in the plan | soft, but survives compaction |
 

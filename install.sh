@@ -48,6 +48,14 @@ else
 fi
 link "$REPO/command/start-work.md" "$CMD_DIR/start-work.md"
 
+CLAUDE_DIR="$HOME/.claude"
+if [ -d "$CLAUDE_DIR" ]; then
+  mkdir -p "$CLAUDE_DIR/agents"
+  link "$REPO/claude/agents/thot.md" "$CLAUDE_DIR/agents/thot.md"
+else
+  skip "$CLAUDE_DIR nicht gefunden; Claude Code übersprungen"
+fi
+
 cat <<'EOF'
 
 Fertig.
@@ -57,4 +65,11 @@ WICHTIG: opencode neu starten. Die Konfiguration wird nur beim Start geladen.
 Danach:
   Agent auf 'thot' wechseln und eine Aufgabe beschreiben
   /start-work <slug>   führt den Plan mit 'imhotep' aus
+
+Claude Code:
+  claude/settings.example.json nach ~/.claude/settings.json kopieren
+  context7 einmal registrieren:
+    claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
+  Planung starten: claude --agent thot
+  Claude Code neu starten, wenn ~/.claude/agents/ neu angelegt wurde
 EOF
