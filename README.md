@@ -168,6 +168,25 @@ facts/decisions are persisted back into those files.
 - Records every planning decision and assumption separately for future reviews.
 - Plan mode is sticky: "do X" means "plan X".
 
+## imhotep — Worker
+
+- Verifies it is the active agent before reading or writing.
+- Loads `caveman` before plan execution; output stays terse.
+- On each `/start-work`, skips checked todos and executes only the first open
+  implementation todo `N.`.
+- After that todo: implement, run listed QA, stop, call `question`, wait for
+  `weiter` / `continue` / `ok` / `go`.
+- On approval: persists later-needed facts/decisions in the plan and review
+  context, checks off the todo, reminds you to start a NEW session for token
+  savings, prints the next `/start-work <slug>`, and stops. Running `/start-work` in the same chat works,
+  but does not save as much context.
+- Final verification tasks `F<n>` run without gates once all `N.` todos are
+  checked. imhotep stops only on failure; otherwise it gives one final report.
+- No commits and no commit suggestions. Opencode blocks commit/history-changing
+  commands via `permission.bash`; Claude Code keeps this as a prompt rule.
+- If the plan is wrong, imhotep stops and hands back to thot instead of
+  improvising.
+
 ## Claude Code variant
 
 `claude/agents/thot.md` and `claude/agents/imhotep.md` are independently
@@ -190,26 +209,7 @@ prevents subagents; frontmatter has no `mode`, `temperature`, or `permission`;
 and backgrounds commands that exceed it.
 
 The `## Execution rules` block in generated plans stays opencode-flavoured on
- purpose. Either Imhotep variant maps its tool names when executing it.
-
-## imhotep — Worker
-
-- Verifies it is the active agent before reading or writing.
-- Loads `caveman` before plan execution; output stays terse.
-- On each `/start-work`, skips checked todos and executes only the first open
-  implementation todo `N.`.
-- After that todo: implement, run listed QA, stop, call `question`, wait for
-  `weiter` / `continue` / `ok` / `go`.
-- On approval: persists later-needed facts/decisions in the plan and review
-  context, checks off the todo, reminds you to start a NEW session for token
-  savings, prints the next `/start-work <slug>`, and stops. Running `/start-work` in the same chat works,
-  but does not save as much context.
-- Final verification tasks `F<n>` run without gates once all `N.` todos are
-  checked. imhotep stops only on failure; otherwise it gives one final report.
-- No commits and no commit suggestions. Opencode blocks commit/history-changing
-  commands via `permission.bash`; Claude Code keeps this as a prompt rule.
-- If the plan is wrong, imhotep stops and hands back to thot instead of
-  improvising.
+purpose. Either Imhotep variant maps its tool names when executing it.
 
 ## Language
 
