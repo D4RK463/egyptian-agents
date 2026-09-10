@@ -1,6 +1,6 @@
 # egyptian-agents
 
-Thot plans in opencode or Claude Code; Imhotep builds in opencode.
+Thot and Imhotep plan and build in opencode or Claude Code.
 
 Modeled on the planner/worker split of
 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), but without
@@ -8,8 +8,9 @@ subagent orchestration, team mode, and dual review.
 
 ## Prerequisites
 
-Both agents assume these optional/required pieces already exist in opencode.
-`install.sh` only links the files from this repo.
+Both agents assume these optional/required pieces already exist in opencode or
+Claude Code. `install.sh` only links files from this repo and the installed
+opencode `caveman` skill.
 
 ### Skills
 
@@ -17,7 +18,10 @@ Both agents assume these optional/required pieces already exist in opencode.
 |---|---|---|---|
 | `caveman` | imhotep | Loaded before plan execution. Gates, errors, and final reports stay terse. | yes |
 
-Install skills under `~/.agents/skills/<name>/SKILL.md`.
+Install opencode skills under `~/.agents/skills/<name>/SKILL.md`. Claude Code
+loads skills from `~/.claude/skills/<name>/SKILL.md`; when
+`~/.agents/skills/caveman` exists, `install.sh` symlinks it into
+`~/.claude/skills/caveman`.
 
 ### MCP servers
 
@@ -62,10 +66,11 @@ authenticated (`opencode auth login`):
 |---|---|
 | thot | `github-copilot/claude-opus-5` |
 | imhotep | `github-copilot/gpt-5.6-terra` |
+| Claude Code imhotep | `sonnet` |
 
 Different provider? Change `model:` in `agent/thot.md` and `agent/imhotep.md`.
-The Claude Code Thot variant pins `model: opus` and runs on the Anthropic
-subscription; opencode agents remain on `github-copilot`.
+Claude Code variants run on the Anthropic subscription: Thot pins `model: opus`
+and Imhotep pins `model: sonnet`; opencode agents remain on `github-copilot`.
 
 ### CLI tools
 
@@ -90,11 +95,15 @@ Creates symlinks:
 | `agent/` | `~/.config/opencode/agent` |
 | `command/start-work.md` | `~/.config/opencode/command(s)/start-work.md` |
 | `claude/agents/thot.md` | `~/.claude/agents/thot.md` |
+| `claude/agents/imhotep.md` | `~/.claude/agents/imhotep.md` |
+| `claude/commands/start-work.md` | `~/.claude/commands/start-work.md` |
+| `~/.agents/skills/caveman` | `~/.claude/skills/caveman` |
 
 Claude Code step is skipped when `~/.claude` is absent. Paste
 `claude/settings.example.json` into `~/.claude/settings.json` manually;
 `install.sh` never writes that file.
-Start Claude Code planning with `claude --agent thot` after installation.
+Start Claude Code planning with `claude --agent thot` or execution with
+`claude --agent imhotep`; use `/start-work <slug>` to resume a plan.
 
 Idempotent. Aborts if a target exists and is not a matching symlink.
 
@@ -102,9 +111,10 @@ Restart opencode afterwards; config is loaded at startup.
 
 ## Workflow
 
-Cross-tool path: plan with `claude --agent thot`, then execute in opencode with
-`opencode --agent imhotep` and `/start-work <slug>`. Plan pair in `docs/plans/`
-is the only interface.
+Plan pair in `docs/plans/` is the only interface. Cross-tool execution works:
+plan with `claude --agent thot`, then execute with `opencode --agent imhotep`.
+A Claude-Code-only round trip also works: plan with `claude --agent thot`, then
+execute with `claude --agent imhotep` and `/start-work <slug>`.
 
 ```text
 Agent: thot                      Agent: imhotep
@@ -151,17 +161,27 @@ facts/decisions are persisted back into those files.
 
 ## Claude Code variant
 
-`claude/agents/thot.md` is a second, independently maintained Thot prompt.
-Edit it with `agent/thot.md` on every prompt change; no generator or shared body
-keeps them synchronized.
+`claude/agents/thot.md` and `claude/agents/imhotep.md` are independently
+maintained Claude Code prompts. Edit the Thot pair and Imhotep pair together on
+prompt changes; no generator or shared body keeps either pair synchronized.
 
-Prompt deltas: Claude Code uses `Agent` and `Explore` instead of
+`claude/commands/start-work.md` resumes plans with `/start-work <slug>`. It uses
+`$ARGUMENTS`; opencode's `command/start-work.md` uses 1-based `$1`, while Claude
+Code `$1` means the second argument.
+
+Thot prompt deltas: Claude Code uses `Agent` and `Explore` instead of
 `task(subagent_type=...)`; it has no `scout`; it uses `mcp__context7__*` tool
 names and `AskUserQuestion` instead of `question`; its frontmatter has no
 `mode` or `temperature`.
 
+Imhotep prompt deltas: `AskUserQuestion` replaces `question`; `Skill` loads
+`caveman`; `claude --agent imhotep` is its identity guard; omitting `Agent`
+prevents subagents; frontmatter has no `mode`, `temperature`, or `permission`;
+`permissionMode: acceptEdits` accepts edits; Bash accepts a per-call `timeout`
+and backgrounds commands that exceed it.
+
 The `## Execution rules` block in generated plans stays opencode-flavoured on
-purpose. Imhotep executes it in opencode.
+ purpose. Either Imhotep variant maps its tool names when executing it.
 
 ## imhotep — Worker
 
@@ -179,8 +199,8 @@ purpose. Imhotep executes it in opencode.
   but does not save as much context.
 - Final verification tasks `F<n>` run without gates once all `N.` todos are
   checked. imhotep stops only on failure; otherwise it gives one final report.
-- No commits and no commit suggestions. Commit/history-changing commands are
-  blocked via `permission.bash`.
+- No commits and no commit suggestions. Opencode blocks commit/history-changing
+  commands via `permission.bash`; Claude Code keeps this as a prompt rule.
 - If the plan is wrong, imhotep stops and hands back to thot instead of
   improvising.
 
@@ -260,11 +280,12 @@ Current execution rule summary:
 | opencode `question` blocks the turn | hard |
 | Claude Code `AskUserQuestion` blocks the turn | unverified; text brief plus end-of-turn remains fallback |
 | model, temperature | hard where agent runtime supports them |
+| Claude Code commit lock | soft: prompt-only; agent frontmatter cannot carry Bash rules, and settings rules apply to every session |
 | caveman style, step gate, fresh-session flow, scope guard, final-verification flow | soft model instruction |
 | `## Execution rules` in the plan | soft, but survives compaction |
 
-The commit lock is real. The rest is discipline, not a guarantee, so the core
-rules live both in the agent prompt and every plan.
+OpenCode commit lock is real. Claude Code commit lock is prompt-only. Other core
+rules are discipline, so they live both in the agent prompt and every plan.
 
 ## Deliberately omitted
 

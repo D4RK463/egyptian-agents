@@ -52,6 +52,20 @@ CLAUDE_DIR="$HOME/.claude"
 if [ -d "$CLAUDE_DIR" ]; then
   mkdir -p "$CLAUDE_DIR/agents"
   link "$REPO/claude/agents/thot.md" "$CLAUDE_DIR/agents/thot.md"
+  link "$REPO/claude/agents/imhotep.md" "$CLAUDE_DIR/agents/imhotep.md"
+
+  CLAUDE_CMD_DIR="$CLAUDE_DIR/commands"
+  mkdir -p "$CLAUDE_CMD_DIR"
+  link "$REPO/claude/commands/start-work.md" "$CLAUDE_CMD_DIR/start-work.md"
+
+  CLAUDE_SKILLS_DIR="$CLAUDE_DIR/skills"
+  CAVEMAN_SRC="$HOME/.agents/skills/caveman"
+  if [ -d "$CAVEMAN_SRC" ]; then
+    mkdir -p "$CLAUDE_SKILLS_DIR"
+    link "$CAVEMAN_SRC" "$CLAUDE_SKILLS_DIR/caveman"
+  else
+    skip "$CAVEMAN_SRC nicht gefunden; caveman muss manuell installiert werden"
+  fi
 else
   skip "$CLAUDE_DIR nicht gefunden; Claude Code übersprungen"
 fi
@@ -68,8 +82,10 @@ Danach:
 
 Claude Code:
   claude/settings.example.json nach ~/.claude/settings.json kopieren
-  context7 einmal registrieren:
-    claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
-  Planung starten: claude --agent thot
-  Claude Code neu starten, wenn ~/.claude/agents/ neu angelegt wurde
+   context7 einmal registrieren:
+     claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
+   Planung starten: claude --agent thot
+   Umsetzung starten: claude --agent imhotep
+   /start-work <slug>   führt den Plan mit 'imhotep' aus
+   Claude Code neu starten, wenn ~/.claude/agents/ neu angelegt wurde
 EOF
