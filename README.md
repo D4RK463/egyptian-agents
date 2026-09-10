@@ -62,15 +62,16 @@ claude mcp add --scope user --transport http context7 https://mcp.context7.com/m
 Both agents pin their model. The `github-copilot` provider must be
 authenticated (`opencode auth login`):
 
-| Agent | Model |
-|---|---|
-| thot | `github-copilot/claude-opus-5` |
-| imhotep | `github-copilot/gpt-5.6-terra` |
-| Claude Code imhotep | `sonnet` |
+| Runtime | Agent | Model |
+|---|---|---|
+| opencode | thot | `github-copilot/claude-opus-5` |
+| opencode | imhotep | `github-copilot/gpt-5.6-terra` |
+| Claude Code | thot | `opus` |
+| Claude Code | imhotep | `sonnet` |
 
-Different provider? Change `model:` in `agent/thot.md` and `agent/imhotep.md`.
-Claude Code variants run on the Anthropic subscription: Thot pins `model: opus`
-and Imhotep pins `model: sonnet`; opencode agents remain on `github-copilot`.
+Different provider? Change `model:` in the relevant agent file. Claude Code
+variants run on the Anthropic subscription; opencode agents remain on
+`github-copilot`.
 
 ### CLI tools
 
@@ -147,8 +148,6 @@ facts/decisions are persisted back into those files.
 
 ## thot — Planner
 
-`claude-opus-5`
-
 - Plans only; never implements.
 - Hard-enforced edit scope: `docs/plans/**` only.
 - Explores before asking and cites findings with `file:line`.
@@ -184,8 +183,6 @@ The `## Execution rules` block in generated plans stays opencode-flavoured on
  purpose. Either Imhotep variant maps its tool names when executing it.
 
 ## imhotep — Worker
-
-`gpt-5.6-terra`
 
 - Verifies it is the active agent before reading or writing.
 - Loads `caveman` before plan execution; output stays terse.
