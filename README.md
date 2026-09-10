@@ -133,13 +133,23 @@ restart after all N. done ─────> final verification without gates
                                  final report
 ```
 
-Use:
+Use opencode:
 
 ```text
 switch agent to thot, describe the task
 ...
 switch agent to imhotep (tab or ctrl+x, then a)
 /start-work <slug>
+```
+
+Use Claude Code: agents are selected when starting a session, not switched in
+an existing session.
+
+```bash
+claude --agent thot
+# plan the task, then start a new session:
+claude --agent imhotep
+# then run: /start-work <slug>
 ```
 
 The plan and its review context are the only interface and state store. Sessions
@@ -210,6 +220,8 @@ English. Review gate triggers accept both German and English continuation words.
 
 ## Switching agents
 
+### opencode
+
 The `agent:` field in command frontmatter does not switch a `primary` agent;
 the command prompt runs under the currently active agent.
 
@@ -221,6 +233,14 @@ the command prompt runs under the currently active agent.
 
 Without switching, `/start-work` can run with thot's permissions. Identity
 guards in imhotep and the command abort before plan execution.
+
+### Claude Code
+
+Start a separate session with the required agent: `claude --agent thot` for
+planning or `claude --agent imhotep` for execution. Claude Code's
+`--agent` option applies to that session; do not use `/start-work` from a Thot
+session. Imhotep's identity guard aborts before plan execution if it is not the
+active agent.
 
 ## Plan and review-context format
 
