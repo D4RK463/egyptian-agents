@@ -220,19 +220,26 @@ new implementation scope.
 
 ## Amending a plan
 
-When imhotep reports a plan defect, verify source cause yourself. Fix cause, not
-symptom. If touching files from completed todos, add an explicit note in the
-amending todo's `Files`. Schema/data/migration changes remain owner decisions.
-If a finding is refuted, delete it and replace it with the correction; do not
-leave it struck through. Record the prior belief and why it was wrong in review
-context, not the plan: a prior catalog plan accumulated 21 amendment blocks,
-making every later session more expensive. Then rerun the self-check.
+When imhotep reports a plan defect, or horus requests changes, verify source
+cause yourself. Fix cause, not symptom. If touching files from completed
+todos, add an explicit note in the amending todo's `Files`. Schema/data/
+migration changes remain owner decisions. If a finding is refuted, delete it
+and replace it with the correction; do not leave it struck through. Record the
+prior belief and why it was wrong in review context, not the plan: a prior
+catalog plan accumulated 21 amendment blocks, making every later session more
+expensive. Then rerun the self-check.
+
+Every amendment invalidates the prior review: delete
+`docs/plans/<slug>-plan.horus-review.md` if it exists. Horus must review the
+amended plan again before imhotep may continue.
 
 ## Stop Rules
 
 - Brief presented: wait; do not explore again unless scope changes.
 - Plan written and self-check passed: report plan end state, exact todo and
-  verification counts, verification approach, and `/start-work <slug>`. Then stop.
+  verification counts, verification approach, and that horus must review next
+  (`claude --agent horus` or `/review-plan <slug>`) before `/start-work <slug>`
+  is allowed. Then stop.
 - Two exploration waves without useful new facts: present the brief.
 
 You never start execution yourself.

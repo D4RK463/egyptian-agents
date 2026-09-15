@@ -10,6 +10,10 @@ Resume `docs/plans/$ARGUMENTS-plan.md`. Read
 If active agent is not Imhotep, stop before reading or writing and tell user to
 start `claude --agent imhotep`.
 
+Imhotep refuses to run without a `docs/plans/$ARGUMENTS-plan.horus-review.md`
+carrying `Verdict: APPROVED`; run `/review-plan $ARGUMENTS` first if it is
+missing.
+
 Then follow Imhotep and plan. Skip checked todos, execute only first unchecked
 implementation todo `N.`, gate, checkpoint on approval, print this command
 again, and stop. If all `N.` todos are checked, run `F<n>` without gates.

@@ -60,18 +60,24 @@ additions. Session memory is disposable; the plan file is state.
    `docs/plans/` and ask. Do not guess. Read its review context when a todo
    references `D<n>`, or when a recorded decision is in doubt; older plans may
    not have one.
-2. Read Scope, Must-NOT-Have, Findings, Decisions, checked todos, unchecked
+2. Horus gate: read `docs/plans/<slug>-plan.horus-review.md`. Missing file ->
+   `Blocked: horus review required`, `Class: plan`, tell the user to run
+   `opencode --agent horus` (or `/review-plan <slug>`) first, then stop.
+   `Verdict: CHANGES_REQUESTED` -> `Blocked: plan not approved by horus`,
+   `Class: plan`, tell the user to return to thot with the review's findings,
+   then stop. Only `Verdict: APPROVED` continues to step 3.
+3. Read Scope, Must-NOT-Have, Findings, Decisions, checked todos, unchecked
    todos, and `## Execution rules`; read needed review-context decisions and
    assumptions on demand.
-3. Inspect current worktree with `git status --short` and `git diff --stat`.
-4. Mirror open tasks into `todowrite`.
-5. Skip checked implementation todos. Execute only the first unchecked `N.` todo.
-6. Run its listed QA, stop, call `question`, and wait.
-7. On explicit `weiter` / `continue` / `ok` / `go`: checkpoint, mark that todo
+4. Inspect current worktree with `git status --short` and `git diff --stat`.
+5. Mirror open tasks into `todowrite`.
+6. Skip checked implementation todos. Execute only the first unchecked `N.` todo.
+7. Run its listed QA, stop, call `question`, and wait.
+8. On explicit `weiter` / `continue` / `ok` / `go`: checkpoint, mark that todo
    `- [x]`, tell the user to start a NEW session for token savings, print the
    next `/start-work <current-slug>` command, then stop. Do not start the next
    implementation todo in this session.
-8. If no unchecked implementation todo remains at session start, run final
+9. If no unchecked implementation todo remains at session start, run final
    verification tasks `F<n>` in order without gates. Stop only on failure. If all
    pass, mark them checked and give one final report.
 
@@ -176,6 +182,8 @@ and may be mentioned at the gate, but are not built.
 
 ## Stop Rules
 
+- Horus review missing or `CHANGES_REQUESTED`: stop and report, before reading
+  further plan state.
 - Gate presented: wait.
 - Approved implementation todo: checkpoint, remind NEW session for token savings, print `/start-work <current-slug>`, then stop.
 - New session with open implementation todos: execute first unchecked todo only.

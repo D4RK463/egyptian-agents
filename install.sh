@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Symlinkt thot + imhotep und den /start-work Command in die globale
-# opencode-Konfiguration. Idempotent. Fasst nichts an, was kein Symlink ist.
+# Symlinkt thot + horus + imhotep und die /review-plan + /start-work Commands
+# in die globale opencode-Konfiguration. Idempotent. Fasst nichts an, was kein
+# Symlink ist.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -47,16 +48,19 @@ else
   ok "$CMD_DIR angelegt"
 fi
 link "$REPO/command/start-work.md" "$CMD_DIR/start-work.md"
+link "$REPO/command/review-plan.md" "$CMD_DIR/review-plan.md"
 
 CLAUDE_DIR="$HOME/.claude"
 if [ -d "$CLAUDE_DIR" ]; then
   mkdir -p "$CLAUDE_DIR/agents"
   link "$REPO/claude/agents/thot.md" "$CLAUDE_DIR/agents/thot.md"
   link "$REPO/claude/agents/imhotep.md" "$CLAUDE_DIR/agents/imhotep.md"
+  link "$REPO/claude/agents/horus.md" "$CLAUDE_DIR/agents/horus.md"
 
   CLAUDE_CMD_DIR="$CLAUDE_DIR/commands"
   mkdir -p "$CLAUDE_CMD_DIR"
   link "$REPO/claude/commands/start-work.md" "$CLAUDE_CMD_DIR/start-work.md"
+  link "$REPO/claude/commands/review-plan.md" "$CLAUDE_CMD_DIR/review-plan.md"
 
   CLAUDE_SKILLS_DIR="$CLAUDE_DIR/skills"
   CAVEMAN_SRC="$HOME/.agents/skills/caveman"
@@ -78,14 +82,17 @@ WICHTIG: opencode neu starten. Die Konfiguration wird nur beim Start geladen.
 
 Danach:
   Agent auf 'thot' wechseln und eine Aufgabe beschreiben
-  /start-work <slug>   führt den Plan mit 'imhotep' aus
+  /review-plan <slug>  lässt 'horus' den Plan vor der Umsetzung prüfen
+  /start-work <slug>   führt den Plan mit 'imhotep' aus (nur nach APPROVED)
 
 Claude Code:
   claude/settings.example.json nach ~/.claude/settings.json kopieren
    context7 einmal registrieren:
      claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
    Planung starten: claude --agent thot
+   Review starten: claude --agent horus
    Umsetzung starten: claude --agent imhotep
-   /start-work <slug>   führt den Plan mit 'imhotep' aus
+   /review-plan <slug>  lässt 'horus' den Plan vor der Umsetzung prüfen
+   /start-work <slug>   führt den Plan mit 'imhotep' aus (nur nach APPROVED)
    Claude Code neu starten, wenn ~/.claude/agents/ neu angelegt wurde
 EOF

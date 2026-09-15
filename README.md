@@ -1,16 +1,18 @@
 # egyptian-agents
 
-Thot and Imhotep plan and build in opencode or Claude Code.
+Thot plans, Horus reviews the plan, and Imhotep builds — in opencode or Claude
+Code.
 
 Modeled on the planner/worker split of
 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), but without
-subagent orchestration, team mode, and dual review.
+subagent orchestration or team mode. The review step is a single mandatory
+plan-review gate, not oh-my-openagent's dual review.
 
 ## Prerequisites
 
-Both agents assume these optional/required pieces already exist in opencode or
-Claude Code. `install.sh` only links files from this repo and the installed
-opencode `caveman` skill.
+All three agents assume these optional/required pieces already exist in
+opencode or Claude Code. `install.sh` only links files from this repo and the
+installed opencode `caveman` skill.
 
 ### Skills
 
@@ -27,7 +29,7 @@ loads skills from `~/.claude/skills/<name>/SKILL.md`; when
 
 | Server | Used by | Why | Required |
 |---|---|---|---|
-| `context7` | thot | Current docs for libraries/frameworks/SDKs/CLIs: `context7_resolve-library-id` then `context7_query-docs`. | yes for external dependencies |
+| `context7` | thot, horus | Current docs for libraries/frameworks/SDKs/CLIs: `context7_resolve-library-id` then `context7_query-docs`. | yes for external dependencies |
 
 Required installation in `~/.config/opencode/opencode.json`:
 
@@ -59,24 +61,29 @@ claude mcp add --scope user --transport http context7 https://mcp.context7.com/m
 
 ### Models
 
-Both agents pin their model. The `github-copilot` provider must be
+All three agents pin their model. The `github-copilot` provider must be
 authenticated (`opencode auth login`):
 
 | Runtime | Agent | Model |
 |---|---|---|
 | opencode | thot | `github-copilot/claude-opus-5` |
+| opencode | horus | `github-copilot/claude-opus-5` |
 | opencode | imhotep | `github-copilot/gpt-5.6-terra` |
 | Claude Code | thot | `opus` |
+| Claude Code | horus | `opus` |
 | Claude Code | imhotep | `sonnet` |
 
-Different provider? Change `model:` in the relevant agent file. Claude Code
-variants run on the Anthropic subscription; opencode agents remain on
-`github-copilot`.
+Horus runs on the same tier as thot, not imhotep: a reviewer weaker than the
+plan's author is more likely to miss the fit mismatches and AK gaps it exists
+to catch, and rubber-stamping defeats the gate. Different provider? Change
+`model:` in the relevant agent file. Claude Code variants run on the Anthropic
+subscription; opencode agents remain on `github-copilot`.
 
 ### CLI tools
 
-thot allowlist contains `rg`, `fd`, `find`, `head`, `tail`, `sed -n`, `wc`, and
-read-only `git` commands. `rg` may be absent; use `git grep` or `grep` portably.
+thot and horus share the same allowlist: `rg`, `fd`, `find`, `head`, `tail`,
+`sed -n`, `wc`, and read-only `git` commands. `rg` may be absent; use `git
+grep` or `grep` portably.
 `cat` is intentionally not allowlisted to avoid large accidental dumps.
 
 Claude Code auto-approves its built-in read-only Bash set. Only `rg` and `fd`
@@ -95,16 +102,20 @@ Creates symlinks:
 |---|---|
 | `agent/` | `~/.config/opencode/agent` |
 | `command/start-work.md` | `~/.config/opencode/command(s)/start-work.md` |
+| `command/review-plan.md` | `~/.config/opencode/command(s)/review-plan.md` |
 | `claude/agents/thot.md` | `~/.claude/agents/thot.md` |
+| `claude/agents/horus.md` | `~/.claude/agents/horus.md` |
 | `claude/agents/imhotep.md` | `~/.claude/agents/imhotep.md` |
 | `claude/commands/start-work.md` | `~/.claude/commands/start-work.md` |
+| `claude/commands/review-plan.md` | `~/.claude/commands/review-plan.md` |
 | `~/.agents/skills/caveman` | `~/.claude/skills/caveman` |
 
 Claude Code step is skipped when `~/.claude` is absent. Paste
 `claude/settings.example.json` into `~/.claude/settings.json` manually;
 `install.sh` never writes that file.
-Start Claude Code planning with `claude --agent thot` or execution with
-`claude --agent imhotep`; use `/start-work <slug>` to resume a plan.
+Start Claude Code planning with `claude --agent thot`, review with
+`claude --agent horus`, or execution with `claude --agent imhotep`; use
+`/review-plan <slug>` to review a plan and `/start-work <slug>` to resume it.
 
 Idempotent. Aborts if a target exists and is not a matching symlink.
 
@@ -112,31 +123,47 @@ Restart opencode afterwards; config is loaded at startup.
 
 ## Workflow
 
-Plan pair in `docs/plans/` is the only interface. Cross-tool execution works:
-plan with `claude --agent thot`, then execute with `opencode --agent imhotep`.
-A Claude-Code-only round trip also works: plan with `claude --agent thot`, then
-execute with `claude --agent imhotep` and `/start-work <slug>`.
+The plan pair plus the horus review verdict in `docs/plans/` is the only
+interface. Cross-tool execution works: plan with `claude --agent thot`, review
+with `opencode --agent horus`, then execute with `opencode --agent imhotep` —
+any combination of runtimes works because the files, not the chat session, are
+the contract. A Claude-Code-only round trip also works: plan with
+`claude --agent thot`, review with `claude --agent horus`, then execute with
+`claude --agent imhotep` and `/start-work <slug>`.
+
+Imhotep refuses to execute a plan without a horus review file carrying
+`Verdict: APPROVED`. On `Verdict: CHANGES_REQUESTED`, or when thot amends a
+plan for any other reason, horus must review again before imhotep may run.
 
 ```text
-Agent: thot                      Agent: imhotep
-───────────                      ──────────────
-explores                         loads caveman
-asks owner decisions only        reads the plan
-waits for your OK                builds first open todo
-writes plan + review context     ───>  Gate: review
-                                 checkpoint + stop
-new session + `/start-work <slug>` -> builds next open todo
-                                 Gate: review
-                                 checkpoint + stop
-                                 ...
-restart after all N. done ─────> final verification without gates
-                                 final report
+Agent: thot                 Agent: horus                Agent: imhotep
+───────────                 ────────────                ──────────────
+explores                    reads plan +                loads caveman
+asks owner decisions only    review context              reads the plan
+waits for your OK           asks for the user            checks horus verdict
+writes plan +                 story's AK, if any         builds first open todo
+  review context             judges implementation        Gate: review
+                              fit + AK + gaps             checkpoint + stop
+                             writes horus-review    ───>  new session +
+                               file with verdict            `/start-work <slug>`
+                                                          builds next open todo
+                                                            Gate: review
+                                                          checkpoint + stop
+                                                          ...
+CHANGES_REQUESTED ──> back to thot, amends plan,          restart after all
+  deletes horus-review file, horus reviews again          N. done ────────────>
+                                                          final verification
+                                                            without gates
+                                                          final report
 ```
 
 Use opencode:
 
 ```text
 switch agent to thot, describe the task
+...
+switch agent to horus (tab or ctrl+x, then a)
+/review-plan <slug>
 ...
 switch agent to imhotep (tab or ctrl+x, then a)
 /start-work <slug>
@@ -148,13 +175,17 @@ an existing session.
 ```bash
 claude --agent thot
 # plan the task, then start a new session:
+claude --agent horus
+# run: /review-plan <slug>
+# on APPROVED, start a new session:
 claude --agent imhotep
 # then run: /start-work <slug>
 ```
 
-The plan and its review context are the only interface and state store. Sessions
-are disposable. That is why plans must be decision-complete, and later-needed
-facts/decisions are persisted back into those files.
+The plan, its review context, and the horus review verdict are the only
+interface and state store. Sessions are disposable. That is why plans must be
+decision-complete, and later-needed facts/decisions are persisted back into
+those files.
 
 ## thot — Planner
 
@@ -167,10 +198,37 @@ facts/decisions are persisted back into those files.
 - Requires an approval brief before writing the plan and review context.
 - Records every planning decision and assumption separately for future reviews.
 - Plan mode is sticky: "do X" means "plan X".
+- Final report points to horus next, not directly to `/start-work`.
+
+## horus — Reviewer
+
+- Reviews only; never implements, and never edits the plan or review context.
+- Hard-enforced edit scope: `docs/plans/**` only, and only its own
+  `<slug>-plan.horus-review.md`.
+- Always asks for the user story's acceptance criteria (AK) when the initial
+  prompt did not already include them; a plan without a user story is a valid,
+  fully reviewable outcome.
+- Reads thot's review context and does not propose reversing a recorded
+  decision without new, concrete codebase evidence.
+- Explores the current codebase like thot to judge implementation fit, citing
+  every mismatch as `file:line`.
+- Checks AK coverage per criterion against todo `Acceptance`/`QA`, not against
+  prose; an uncovered criterion is a gap even if mentioned in `TL;DR`.
+- Also searches for gaps thot and the requester could plausibly have missed:
+  unaccounted callers/usages of touched code, tests the plan would break,
+  missing migrations/config for a changed contract, and failure/error paths
+  no todo mentions. Every gap needs a concrete `file:line` anchor; a
+  speculative "nice to have" is not a finding.
+- Writes exactly one verdict, `APPROVED` or `CHANGES_REQUESTED`, to
+  `docs/plans/<slug>-plan.horus-review.md`.
+- Runs in its own session/context, same as thot and imhotep.
 
 ## imhotep — Worker
 
 - Verifies it is the active agent before reading or writing.
+- Refuses to run without `docs/plans/<slug>-plan.horus-review.md` carrying
+  `Verdict: APPROVED`; missing file or `CHANGES_REQUESTED` stops it before it
+  reads plan state.
 - Loads `caveman` before plan execution; output stays terse.
 - On each `/start-work`, skips checked todos and executes only the first open
   implementation todo `N.`.
@@ -189,18 +247,26 @@ facts/decisions are persisted back into those files.
 
 ## Claude Code variant
 
-`claude/agents/thot.md` and `claude/agents/imhotep.md` are independently
-maintained Claude Code prompts. Edit the Thot pair and Imhotep pair together on
-prompt changes; no generator or shared body keeps either pair synchronized.
+`claude/agents/thot.md`, `claude/agents/horus.md`, and
+`claude/agents/imhotep.md` are independently maintained Claude Code prompts.
+Edit the opencode and Claude Code file of each agent together on prompt
+changes; no generator or shared body keeps either pair synchronized.
 
-`claude/commands/start-work.md` resumes plans with `/start-work <slug>`. It uses
-`$ARGUMENTS`; opencode's `command/start-work.md` uses 1-based `$1`, while Claude
-Code `$1` means the second argument.
+`claude/commands/start-work.md` resumes plans with `/start-work <slug>`, and
+`claude/commands/review-plan.md` runs the horus gate with
+`/review-plan <slug>`. Both use `$ARGUMENTS`; opencode's `command/start-work.md`
+and `command/review-plan.md` use 1-based `$1`, while Claude Code `$1` means the
+second argument.
 
 Thot prompt deltas: Claude Code uses `Agent` and `Explore` instead of
 `task(subagent_type=...)`; it has no `scout`; it uses `mcp__context7__*` tool
 names and `AskUserQuestion` instead of `question`; its frontmatter has no
 `mode` or `temperature`.
+
+Horus prompt deltas mirror Thot's: `Agent`/`Explore` instead of
+`task(subagent_type=...)`, `mcp__context7__*` tool names,
+`AskUserQuestion` instead of `question`, `claude --agent horus` as its
+identity guard, no `mode` or `temperature` in frontmatter.
 
 Imhotep prompt deltas: `AskUserQuestion` replaces `question`; `Skill` loads
 `caveman`; `claude --agent imhotep` is its identity guard; omitting `Agent`
@@ -229,20 +295,22 @@ the command prompt runs under the currently active agent.
 |---|---|
 | Cycle | Press `tab` (`agent_cycle`) |
 | Select | Press `ctrl+x`, then `a` (`agent_list`) |
-| New session | Run `opencode --agent imhotep` |
+| New session | Run `opencode --agent horus` or `opencode --agent imhotep` |
 
-Without switching, `/start-work` can run with thot's permissions. Identity
-guards in imhotep and the command abort before plan execution.
+Without switching, `/review-plan` or `/start-work` can run with the wrong
+agent's permissions. Identity guards in horus, imhotep, and both commands
+abort before review or execution.
 
 ### Claude Code
 
 Start a separate session with the required agent: `claude --agent thot` for
-planning or `claude --agent imhotep` for execution. Claude Code's
-`--agent` option applies to that session; do not use `/start-work` from a Thot
-session. Imhotep's identity guard aborts before plan execution if it is not the
-active agent.
+planning, `claude --agent horus` for review, or `claude --agent imhotep` for
+execution. Claude Code's `--agent` option applies to that session; do not use
+`/review-plan` or `/start-work` from a Thot session. Horus's and imhotep's
+identity guards abort before review or execution if they are not the active
+agent.
 
-## Plan and review-context format
+## Plan, review-context, and horus-review format
 
 Every new plan creates this pair:
 
@@ -251,9 +319,16 @@ docs/plans/<slug>-plan.md
 docs/plans/<slug>-plan.review-context.md
 ```
 
-`<slug>` is lowercase kebab-case and excludes the suffix; `/start-work <slug>`
-resolves the corresponding `<slug>-plan.md` file. Every plan filename therefore
-ends in `-plan.md`.
+Horus adds a third file once it has reviewed the plan:
+
+```text
+docs/plans/<slug>-plan.horus-review.md
+```
+
+`<slug>` is lowercase kebab-case and excludes the suffix; `/review-plan <slug>`
+and `/start-work <slug>` resolve the corresponding `<slug>-plan.md` file (and,
+for imhotep, its `-plan.horus-review.md`). Every plan filename therefore ends
+in `-plan.md`.
 
 The plan remains the execution contract:
 
@@ -271,9 +346,14 @@ The plan remains the execution contract:
 The review context is the canonical decision/assumption record for reviewers.
 Each `D<n>` entry records its status (`confirmed`, `assumption-to-verify`, or
 `superseded`), rationale, evidence, rejected alternatives, and constraints or
-validity. A reviewer must read it before proposing changes and may reverse a
-recorded decision only with new, concrete evidence. Older plans may not have a
-review-context file.
+validity. Horus, like any reviewer, must read it before proposing changes and
+may reverse a recorded decision only with new, concrete evidence. Older plans
+may not have a review-context file.
+
+The horus-review file carries exactly one `Verdict:` line, `APPROVED` or
+`CHANGES_REQUESTED`, plus the fit mismatches, AK gaps, and overlooked gaps it
+found. It is disposable state, not a decision record: thot deletes it on every
+amendment, and horus rewrites it from scratch on every review.
 
 Task lines must be exactly `- [ ] N.` or `- [ ] F<n>.` at column 0. Target 5–8
 implementation todos. Implementation and test are one todo.
@@ -282,11 +362,12 @@ Current execution rule summary:
 
 1. Load `caveman` first.
 2. No commits or history changes.
-3. Each session executes only the first unchecked implementation todo `N.`.
-4. Gate after that todo, then checkpoint and stop on approval.
-5. Final verification `F<n>` runs without gates unless it fails.
-6. `Must-NOT-Have` is binding.
-7. Plan wrong or reality differs: stop and return to thot.
+3. Refuse to run without a horus-review file carrying `Verdict: APPROVED`.
+4. Each session executes only the first unchecked implementation todo `N.`.
+5. Gate after that todo, then checkpoint and stop on approval.
+6. Final verification `F<n>` runs without gates unless it fails.
+7. `Must-NOT-Have` is binding.
+8. Plan wrong or reality differs: stop and return to thot.
 
 ## What is hard-enforced
 
@@ -298,6 +379,7 @@ Current execution rule summary:
 | Claude Code `AskUserQuestion` blocks the turn | unverified; text brief plus end-of-turn remains fallback |
 | model, temperature | hard where agent runtime supports them |
 | Claude Code commit lock | soft: prompt-only; agent frontmatter cannot carry Bash rules, and settings rules apply to every session |
+| Horus gate (imhotep refuses without `Verdict: APPROVED`) | soft: prompt-only file check, same enforcement class as the identity guards |
 | caveman style, step gate, fresh-session flow, scope guard, final-verification flow | soft model instruction |
 | `## Execution rules` in the plan | soft, but survives compaction |
 
@@ -306,6 +388,9 @@ rules are discipline, so they live both in the agent prompt and every plan.
 
 ## Deliberately omitted
 
-Team mode, dual review, separate plan review agents, SHA256 round contracts,
-draft state, scaffold script, category routing, and lifecycle hooks. With two
-sequential agents they mostly cost prompt budget.
+Team mode, dual review (two independent reviewers, or reviewer + counter-review
+of the reviewer), SHA256 round contracts, draft state, scaffold script,
+category routing, and lifecycle hooks. Horus is a single mandatory gate, not a
+second parallel reviewer; staleness after an amendment is handled by thot
+deleting the horus-review file, not by hashing plan content. With three
+sequential agents these would mostly cost prompt budget.
