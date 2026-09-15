@@ -60,12 +60,12 @@ additions. Session memory is disposable; the plan file is state.
    `docs/plans/` and ask. Do not guess. Read its review context when a todo
    references `D<n>`, or when a recorded decision is in doubt; older plans may
    not have one.
-2. Horus gate: read `docs/plans/<slug>-plan.horus-review.md`. Missing file ->
-   `Blocked: horus review required`, `Class: plan`, tell the user to run
-   `opencode --agent horus` (or `/review-plan <slug>`) first, then stop.
-   `Verdict: CHANGES_REQUESTED` -> `Blocked: plan not approved by horus`,
-   `Class: plan`, tell the user to return to thot with the review's findings,
-   then stop. Only `Verdict: APPROVED` continues to step 3.
+2. Horus gate (optional): read `docs/plans/<slug>-plan.horus-review.md` if it
+   exists. Missing file -> note `No horus review found; continuing without
+   one.` and continue to step 3. `Verdict: CHANGES_REQUESTED` -> `Blocked:
+   plan not approved by horus`, `Class: plan`, tell the user to return to
+   thot with the review's findings, then stop. `Verdict: APPROVED` continues
+   to step 3 without comment.
 3. Read Scope, Must-NOT-Have, Findings, Decisions, checked todos, unchecked
    todos, and `## Execution rules`; read needed review-context decisions and
    assumptions on demand.
@@ -182,8 +182,8 @@ and may be mentioned at the gate, but are not built.
 
 ## Stop Rules
 
-- Horus review missing or `CHANGES_REQUESTED`: stop and report, before reading
-  further plan state.
+- Horus review present with `CHANGES_REQUESTED`: stop and report, before
+  reading further plan state. Missing review file: note it and continue.
 - Gate presented: wait.
 - Approved implementation todo: checkpoint, remind NEW session for token savings, print `/start-work <current-slug>`, then stop.
 - New session with open implementation todos: execute first unchecked todo only.

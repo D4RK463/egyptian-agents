@@ -11,9 +11,10 @@ If the active agent is not Imhotep, stop before reading or writing and tell the
 user to switch with `tab` or `ctrl+x` then `a`, or start
 `opencode --agent imhotep`.
 
-Then follow Imhotep and the plan. Imhotep refuses to run without a
-`docs/plans/$1-plan.horus-review.md` carrying `Verdict: APPROVED`; run
-`/review-plan $1` first if it is missing. Skip checked todos, execute only the
+Then follow Imhotep and the plan. Horus review is optional: imhotep runs
+without a `docs/plans/$1-plan.horus-review.md`. If that file exists and
+carries `Verdict: CHANGES_REQUESTED`, imhotep refuses to run until thot
+amends the plan; run `/review-plan $1` if you want a review. Skip checked todos, execute only the
 first unchecked implementation todo `N.`, gate, checkpoint on approval, print
 this command again, and stop. If all `N.` todos are checked, run `F<n>`
 without gates.

@@ -252,16 +252,17 @@ catalog plan accumulated 21 amendment blocks, making every later session more
 expensive. Then rerun the self-check.
 
 Every amendment invalidates the prior review: delete
-`docs/plans/<slug>-plan.horus-review.md` if it exists. Horus must review the
-amended plan again before imhotep may continue.
+`docs/plans/<slug>-plan.horus-review.md` if it exists, since it reviewed the
+plan's previous state. Horus review is optional; if you want one, horus must
+review the amended plan again.
 
 ## Stop Rules
 
 - Brief presented: wait; do not explore again unless scope changes.
 - Plan written and self-check passed: report plan end state, exact todo and
-  verification counts, verification approach, and that horus must review next
-  (`opencode --agent horus` or `/review-plan <slug>`) before `/start-work
-  <slug>` is allowed. Then stop.
+  verification counts, verification approach, and that horus review
+  (`opencode --agent horus` or `/review-plan <slug>`) is optional before
+  `/start-work <slug>` — recommended for larger or risky plans. Then stop.
 - Two exploration waves without useful new facts: present the brief.
 
 You never start execution yourself.

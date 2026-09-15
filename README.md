@@ -5,7 +5,7 @@ Code.
 
 Modeled on the planner/worker split of
 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), but without
-subagent orchestration or team mode. The review step is a single mandatory
+subagent orchestration or team mode. The review step is a single optional
 plan-review gate, not oh-my-openagent's dual review.
 
 ## Prerequisites
@@ -131,12 +131,16 @@ the contract. A Claude-Code-only round trip also works: plan with
 `claude --agent thot`, review with `claude --agent horus`, then execute with
 `claude --agent imhotep` and `/start-work <slug>`.
 
-Imhotep refuses to execute a plan without a horus review file carrying
-`Verdict: APPROVED`. On `Verdict: CHANGES_REQUESTED`, or when thot amends a
-plan for any other reason, horus must review again before imhotep may run.
+Horus review is optional: imhotep executes a plan without a horus review file
+at all. If a review file exists and carries `Verdict: CHANGES_REQUESTED`,
+imhotep refuses to run until thot amends the plan and, if you want another
+review, horus reviews again.
+
+Horus review is optional: skip straight from thot to imhotep by running
+`/start-work <slug>` without `/review-plan <slug>` first.
 
 ```text
-Agent: thot                 Agent: horus                Agent: imhotep
+Agent: thot                 Agent: horus (optional)     Agent: imhotep
 ───────────                 ────────────                ──────────────
 explores                    reads plan +                loads caveman
 asks owner decisions only    review context              reads the plan
@@ -198,7 +202,8 @@ those files.
 - Requires an approval brief before writing the plan and review context.
 - Records every planning decision and assumption separately for future reviews.
 - Plan mode is sticky: "do X" means "plan X".
-- Final report points to horus next, not directly to `/start-work`.
+- Final report mentions horus review as an optional next step; `/start-work`
+  works directly without it.
 
 ## horus — Reviewer
 
@@ -226,9 +231,9 @@ those files.
 ## imhotep — Worker
 
 - Verifies it is the active agent before reading or writing.
-- Refuses to run without `docs/plans/<slug>-plan.horus-review.md` carrying
-  `Verdict: APPROVED`; missing file or `CHANGES_REQUESTED` stops it before it
-  reads plan state.
+- Horus review is optional: runs without a `docs/plans/<slug>-plan.horus-review.md`
+  file. If one exists and carries `Verdict: CHANGES_REQUESTED`, it stops
+  before it reads plan state until thot amends the plan.
 - Loads `caveman` before plan execution; output stays terse.
 - On each `/start-work`, skips checked todos and executes only the first open
   implementation todo `N.`.
@@ -362,7 +367,8 @@ Current execution rule summary:
 
 1. Load `caveman` first.
 2. No commits or history changes.
-3. Refuse to run without a horus-review file carrying `Verdict: APPROVED`.
+3. Horus review is optional: run without a horus-review file; refuse only on
+   `Verdict: CHANGES_REQUESTED`.
 4. Each session executes only the first unchecked implementation todo `N.`.
 5. Gate after that todo, then checkpoint and stop on approval.
 6. Final verification `F<n>` runs without gates unless it fails.
@@ -379,7 +385,7 @@ Current execution rule summary:
 | Claude Code `AskUserQuestion` blocks the turn | unverified; text brief plus end-of-turn remains fallback |
 | model, temperature | hard where agent runtime supports them |
 | Claude Code commit lock | soft: prompt-only; agent frontmatter cannot carry Bash rules, and settings rules apply to every session |
-| Horus gate (imhotep refuses without `Verdict: APPROVED`) | soft: prompt-only file check, same enforcement class as the identity guards |
+| Horus gate (optional; imhotep refuses only on `Verdict: CHANGES_REQUESTED`) | soft: prompt-only file check, same enforcement class as the identity guards |
 | caveman style, step gate, fresh-session flow, scope guard, final-verification flow | soft model instruction |
 | `## Execution rules` in the plan | soft, but survives compaction |
 
@@ -390,7 +396,7 @@ rules are discipline, so they live both in the agent prompt and every plan.
 
 Team mode, dual review (two independent reviewers, or reviewer + counter-review
 of the reviewer), SHA256 round contracts, draft state, scaffold script,
-category routing, and lifecycle hooks. Horus is a single mandatory gate, not a
+category routing, and lifecycle hooks. Horus is a single optional gate, not a
 second parallel reviewer; staleness after an amendment is handled by thot
 deleting the horus-review file, not by hashing plan content. With three
 sequential agents these would mostly cost prompt budget.
