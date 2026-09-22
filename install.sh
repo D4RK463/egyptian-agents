@@ -56,6 +56,7 @@ if [ -d "$CLAUDE_DIR" ]; then
   link "$REPO/claude/agents/thot.md" "$CLAUDE_DIR/agents/thot.md"
   link "$REPO/claude/agents/imhotep.md" "$CLAUDE_DIR/agents/imhotep.md"
   link "$REPO/claude/agents/horus.md" "$CLAUDE_DIR/agents/horus.md"
+  link "$REPO/claude/agents/research.md" "$CLAUDE_DIR/agents/research.md"
 
   CLAUDE_CMD_DIR="$CLAUDE_DIR/commands"
   mkdir -p "$CLAUDE_CMD_DIR"

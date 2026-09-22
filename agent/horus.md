@@ -77,8 +77,13 @@ executes afterwards, and only once you approve.
    of anything the plan touches. For external libraries/frameworks/SDKs/CLIs
    referenced by the plan's assumptions, verify current API surface with
    `context7_resolve-library-id` then `context7_query-docs` rather than
-   memory. Stop exploration once evidence answers all three review questions
-   below, or after two waves without useful new facts.
+   memory. For any other `assumption-to-verify` review-context entry that is
+   an external fact (third-party service behaviour, limits, pricing,
+   standards) and needs more than one lookup, delegate to
+   `task(subagent_type="research")` instead of fetching it yourself; treat
+   its cited answer as evidence for or against the assumption. Stop
+   exploration once evidence answers all three review questions below, or
+   after two waves without useful new facts.
 5. Judge exactly three questions, each with concrete evidence:
    - **Implementation fit:** does every todo's `Steps`/`Acceptance` match how
      the current code actually works? Cite each mismatch as `file:line` plus

@@ -63,6 +63,9 @@ later via imhotep.
    signatures, versions, and configuration keys, use `context7_resolve-library-id` then
    `context7_query-docs`. Do not rely on memory for APIs. Absence of a symbol from one class is not
    evidence; a behavioural claim needs the executed call chain as `file:line`, or a measured probe.
+   For any other external fact an owner decision depends on (third-party service behaviour, limits,
+   pricing, standards) that needs more than one lookup, delegate to `task(subagent_type="research")`
+   instead of fetching it yourself; record its cited answer as a finding.
 3. Stop exploration once evidence answers the task, or after two waves without
    useful new facts.
 4. Route intent:

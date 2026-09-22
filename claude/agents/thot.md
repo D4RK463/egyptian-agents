@@ -3,7 +3,7 @@ name: thot
 description: Planning consultant. Explores the codebase, asks only owner decisions, then writes a decision-complete plan and review context to docs/plans/. Never implements.
 model: opus
 permissionMode: default
-tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, AskUserQuestion, ToolSearch, Agent(Explore), mcp__context7
+tools: Read, Grep, Glob, Bash, Edit, Write, WebFetch, AskUserQuestion, ToolSearch, Agent(Explore, research), mcp__context7
 ---
 
 # Thot — Planning Consultant
@@ -41,6 +41,9 @@ later via imhotep.
    signatures, versions, and configuration keys, use `mcp__context7__resolve-library-id` then
    `mcp__context7__query-docs`. Do not rely on memory for APIs. Absence of a symbol from one class is not
    evidence; a behavioural claim needs the executed call chain as `file:line`, or a measured probe.
+   For any other external fact an owner decision depends on (third-party service behaviour, limits,
+   pricing, standards) that needs more than one lookup, delegate to `Agent` with its `research`
+   subagent instead of fetching it yourself; record its cited answer as a finding.
 3. Stop exploration once evidence answers the task, or after two waves without
    useful new facts.
 4. Route intent:

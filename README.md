@@ -106,6 +106,7 @@ Creates symlinks:
 | `claude/agents/thot.md` | `~/.claude/agents/thot.md` |
 | `claude/agents/horus.md` | `~/.claude/agents/horus.md` |
 | `claude/agents/imhotep.md` | `~/.claude/agents/imhotep.md` |
+| `claude/agents/research.md` | `~/.claude/agents/research.md` |
 | `claude/commands/start-work.md` | `~/.claude/commands/start-work.md` |
 | `claude/commands/review-plan.md` | `~/.claude/commands/review-plan.md` |
 | `~/.agents/skills/caveman` | `~/.claude/skills/caveman` |
@@ -196,7 +197,9 @@ those files.
 - Plans only; never implements.
 - Hard-enforced edit scope: `docs/plans/**` only.
 - Explores before asking and cites findings with `file:line`.
-- Uses Context7 for external API/library details.
+- Uses Context7 for external API/library details; delegates any other
+  external fact blocking an owner decision to the `research` subagent, which
+  returns a cited, condensed answer instead of raw fetched pages.
 - Asks only owner decisions: irreversible/security-critical choices, public API
   or config, data/schema, new dependencies, packaging, migrations.
 - Requires an approval brief before writing the plan and review context.
@@ -216,7 +219,8 @@ those files.
 - Reads thot's review context and does not propose reversing a recorded
   decision without new, concrete codebase evidence.
 - Explores the current codebase like thot to judge implementation fit, citing
-  every mismatch as `file:line`.
+  every mismatch as `file:line`; delegates external `assumption-to-verify`
+  entries beyond library/API surface to the `research` subagent.
 - Checks AK coverage per criterion against todo `Acceptance`/`QA`, not against
   prose; an uncovered criterion is a gap even if mentioned in `TL;DR`.
 - Also searches for gaps thot and the requester could plausibly have missed:
@@ -256,6 +260,8 @@ those files.
 `claude/agents/imhotep.md` are independently maintained Claude Code prompts.
 Edit the opencode and Claude Code file of each agent together on prompt
 changes; no generator or shared body keeps either pair synchronized.
+`claude/agents/research.md` / `agent/research.md` are the same pair for the
+`research` subagent, wired into both thot and horus.
 
 `claude/commands/start-work.md` resumes plans with `/start-work <slug>`, and
 `claude/commands/review-plan.md` runs the horus gate with
@@ -264,12 +270,15 @@ and `command/review-plan.md` use 1-based `$1`, while Claude Code `$1` means the
 second argument.
 
 Thot prompt deltas: Claude Code uses `Agent` and `Explore` instead of
-`task(subagent_type=...)`; it has no `scout`; it uses `mcp__context7__*` tool
-names and `AskUserQuestion` instead of `question`; its frontmatter has no
-`mode` or `temperature`.
+`task(subagent_type=...)`; it has no `scout`; external facts beyond
+library/API surface go to the `research` subagent via
+`Agent(Explore, research)` instead of `task(subagent_type="research")`; it
+uses `mcp__context7__*` tool names and `AskUserQuestion` instead of
+`question`; its frontmatter has no `mode` or `temperature`.
 
 Horus prompt deltas mirror Thot's: `Agent`/`Explore` instead of
-`task(subagent_type=...)`, `mcp__context7__*` tool names,
+`task(subagent_type=...)`, external `assumption-to-verify` facts go to
+`research` via `Agent(Explore, research)`, `mcp__context7__*` tool names,
 `AskUserQuestion` instead of `question`, `claude --agent horus` as its
 identity guard, no `mode` or `temperature` in frontmatter.
 
