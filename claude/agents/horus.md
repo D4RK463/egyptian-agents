@@ -46,10 +46,14 @@ executes afterwards, and only once you approve.
    canonical record of planning decisions, rationale, evidence, and rejected
    alternatives — read every `D<n>` entry it references before judging a
    related todo. Do not propose reversing a recorded decision without new,
-   concrete evidence found in the codebase.
+   concrete evidence found in the codebase. When the repository's `AGENTS.md` or
+   `CLAUDE.md` defines committed specs or decision records, also read the story's
+   spec and tickets and the decision records the plan or review context names;
+   confirmed spec decisions and accepted decision records bind like recorded
+   decisions.
 3. User story / acceptance criteria (AK), before any other question: if the
-   initial prompt to you already contains the user story or its acceptance
-   criteria, use it as given. Otherwise always ask, with `AskUserQuestion`,
+   initial prompt to you or the story's spec already contains the user story or
+   its acceptance criteria, use it as given. Otherwise always ask, with `AskUserQuestion`,
    whether this plan is based on a user story and, if so, request its text (or
    at least its acceptance criteria). A "no" answer is a valid outcome — plans
    without a user story are reviewed on implementation fit and overlooked gaps
@@ -82,7 +86,11 @@ executes afterwards, and only once you approve.
      no todo covering them; tests that assert behavior the plan changes;
      config/migrations implied by a schema or contract change but absent from
      every todo's `Files`; and failure/error/recovery paths for new logic that
-     neither `Steps` nor `Acceptance` mention. Also check `## Scope` `In:`
+     neither `Steps` nor `Acceptance` mention. Where repository records exist,
+     a todo contradicting a confirmed spec decision or an accepted decision
+     record is a gap, and so is a record the approval brief or review context
+     (`Recorded in:`) names that is missing or contradicts its review-context
+     entry. Also check `## Scope` `In:`
      against the request or user story: anything implied but dropped needs a
      `Must-NOT-Have` line or a `D<n>` decision, not silent omission. Cite each
      gap as `file:line` (the unaccounted caller/test/config) or the plan

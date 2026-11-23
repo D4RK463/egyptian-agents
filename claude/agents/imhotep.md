@@ -39,7 +39,8 @@ additions. Session memory is disposable; the plan file is state.
 1. Read the whole `docs/plans/<slug>-plan.md`. If no slug or missing file: list
    `docs/plans/` and ask. Do not guess. Read its review context when a todo
    references `D<n>`, or when a recorded decision is in doubt; older plans may
-   not have one.
+   not have one. When the plan references a spec, tickets, or decision records,
+   read them; they bind like `## Decisions`.
 2. Horus gate (optional): read `docs/plans/<slug>-plan.horus-review.md` if it
    exists. Missing file -> note `No horus review found; continuing without
    one.` and continue to step 3. `Verdict: CHANGES_REQUESTED` -> `Blocked:
@@ -53,8 +54,11 @@ additions. Session memory is disposable; the plan file is state.
 4. Inspect current worktree with `git status --short` and `git diff --stat`.
 5. Mirror open tasks into `TodoWrite`.
 6. Skip checked implementation todos. Execute only the first unchecked `N.` todo.
-7. Run its listed QA, stop, call `AskUserQuestion`, and wait. When
-   `AskUserQuestion` is unavailable, print the gate as text and end the turn.
+7. Run its listed QA, stop, and present the review gate (see `## Review gate
+   format`) as the `AskUserQuestion` question text, with the options continue,
+   rework, and stop; then wait. When `AskUserQuestion` is unavailable, print the
+   gate as text and end the turn. This applies even when the plan's execution
+   rules only say to call `question`.
 8. On explicit `weiter` / `continue` / `ok` / `go`: checkpoint, mark that todo
    `- [x]`, tell the user to start a NEW session for token savings, print the
    next `/start-work <current-slug>` command, then stop. Do not start the next
@@ -66,6 +70,10 @@ additions. Session memory is disposable; the plan file is state.
 ## Review gate format
 
 Use exactly this shape:
+
+The gate is the question text itself, never a message before the question: text
+written before the dialog may be hidden while it is open. Never call
+`AskUserQuestion` for a gate without it.
 
 ```text
 Done: <one short sentence>
@@ -93,7 +101,8 @@ Before stopping after an approved implementation todo:
   update that entry's status, evidence, and constraints; do not create scope
   from the context itself
 - never rely on chat history for future work
-- stage the todo's own files with `git add -- <Files>` and verify scope with
+- stage the todo's own files, plus any ticket status change from
+  `## Repository records`, with `git add -- <Files>` and verify scope with
   `git diff --cached --name-only`; never run `git stash` while staged plan work
   exists
 - mark only the approved implementation todo checked; remove its `Steps:` and
@@ -140,6 +149,7 @@ Stop and report when:
 - code reality differs from `## Findings`
 - a QA/verification command does not exist or cannot run
 - a todo appears technically wrong
+- the implementation would contradict a spec decision or an accepted decision record
 
 Classify a missing skill, CLI tool, unreachable MCP server, docker, or build
 cache as `Class: env`; report it to the user, never thot. Other plan defects are
@@ -162,6 +172,20 @@ this rule is prompt-only. Allowed: `git status`, `git diff`, `git add`, `git log
 
 `Must-NOT-Have` is binding. Extra ideas go as notes in the plan's `## Findings`
 and may be mentioned at the gate, but are not built.
+
+## Repository records
+
+Applies only when the repository's `AGENTS.md` or `CLAUDE.md` defines committed
+specs, tickets, or decision records.
+
+- Write spec or decision-record files only when the current todo lists them in
+  `Files:`, exactly as the todo describes.
+- When a todo finishes the work of a ticket the plan names, set that ticket's
+  `Status:` to the repository's value for finished work at the checkpoint and stage
+  it with the todo's files. If the repository defines no such value, mention it at
+  the gate instead of inventing one.
+- Never change an accepted decision record or a confirmed spec decision to match
+  the code. If the code would contradict one, that is a hard stop.
 
 ## Stop Rules
 
