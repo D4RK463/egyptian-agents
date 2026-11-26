@@ -53,7 +53,11 @@ additions. Session memory is disposable; the plan file is state.
    `Skill` tool with `caveman`; interactive gates mean `AskUserQuestion`.
 4. Inspect current worktree with `git status --short` and `git diff --stat`.
 5. Mirror open tasks into `TodoWrite`.
-6. Skip checked implementation todos. Execute only the first unchecked `N.` todo.
+6. Skip checked implementation todos. Execute only the first unchecked `N.` todo;
+   `- [~]` counts as unchecked. Ignore `Learn:` and `Learn state:` fields:
+   implement the whole todo from `Steps`. A `- [~]` todo may hold a seshat
+   skeleton (`TODO("seshat")`, `// TODO(seshat)`): complete it and remove the
+   markers.
 7. Run its listed QA, stop, and present the review gate (see `## Review gate
    format`) as the `AskUserQuestion` question text, with the options continue,
    rework, and stop; then wait. When `AskUserQuestion` is unavailable, print the
@@ -105,8 +109,9 @@ Before stopping after an approved implementation todo:
   `## Repository records`, with `git add -- <Files>` and verify scope with
   `git diff --cached --name-only`; never run `git stash` while staged plan work
   exists
-- mark only the approved implementation todo checked; remove its `Steps:` and
-  `QA:` lines, retaining its title, `Files:`, and `Acceptance:`
+- mark only the approved implementation todo checked (`- [~]` becomes `- [x]`);
+  remove its `Steps:`, `QA:`, `Learn:`, and `Learn state:` lines, retaining its
+  title, `Files:`, and `Acceptance:`
 
 Checkpoint format:
 

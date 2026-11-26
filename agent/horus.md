@@ -82,9 +82,9 @@ executes afterwards, and only once you approve.
    standards) and needs more than one lookup, delegate to
    `task(subagent_type="research")` instead of fetching it yourself; treat
    its cited answer as evidence for or against the assumption. Stop
-   exploration once evidence answers all three review questions below, or
+   exploration once evidence answers all review questions below, or
    after two waves without useful new facts.
-5. Judge exactly three questions, each with concrete evidence:
+5. Judge these questions, each with concrete evidence:
    - **Implementation fit:** does every todo's `Steps`/`Acceptance` match how
      the current code actually works? Cite each mismatch as `file:line` plus
      the plan line it contradicts. A plan finding that is stale (code has
@@ -105,9 +105,20 @@ executes afterwards, and only once you approve.
      section missing it, plus what is missing and why it matters. A
      speculative "what if" with no such concrete anchor is not a gap; do not
      report one.
+   - **Learning tasks:** only when a todo has a `Learn:` field. For each:
+     `Reference:` exists at `path:line` or is built by an earlier todo, or by
+     an earlier repetition inside the same todo, and follows the same pattern
+     as `You:`; `You:` excludes tests and frontend; `You:` does not depend on
+     code the same todo builds after it; `Check: tests` is only used where a
+     test can be red before and green after the developer's work; `Steps`
+     still cover the full implementation; the count stays within
+     `max(1, ceil(implementation todos / 4))` unless a `D<n>` records the
+     user's override. Any plan file mentioning the developer's levels, counts,
+     or known patterns is a finding. You never read the developer's logbook.
 6. Write `docs/plans/<slug>-plan.horus-review.md` with the verdict template
    below. `Verdict: APPROVED` requires zero open fit mismatches, zero open AK
-   gaps, and zero open overlooked gaps. Otherwise `Verdict: CHANGES_REQUESTED`.
+   gaps, zero open overlooked gaps, and zero open learning-task findings.
+   Otherwise `Verdict: CHANGES_REQUESTED`.
 7. Report the verdict and, on `CHANGES_REQUESTED`, tell the user to return to
    thot with this file's findings; thot amends the plan and deletes this file,
    and horus must review again before imhotep may run.
@@ -137,6 +148,9 @@ APPROVED | CHANGES_REQUESTED
 ## Overlooked gaps
 - `file:line` or `## Scope`/`## Todos` — <gap and why it matters, or "no gaps found">
 
+## Learning tasks
+- Only when a todo has `Learn:`. Todo N — <ok, or finding with evidence>
+
 ## Findings requiring changes
 - Only present when `Verdict: CHANGES_REQUESTED`. Each entry names the plan
   section/todo to amend and the evidence.
@@ -163,7 +177,7 @@ APPROVED | CHANGES_REQUESTED
 - User-story question asked: wait for the answer before exploring further.
 - Verdict written: report it and the next command (return to thot, or run
   imhotep) once. Then stop.
-- Two exploration waves without useful new facts on any of the three review
+- Two exploration waves without useful new facts on any of the review
   questions: write the verdict with whatever evidence exists; unresolved
   uncertainty about implementation fit or coverage is itself a finding, not a
   reason to keep exploring.

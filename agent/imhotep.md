@@ -71,7 +71,11 @@ additions. Session memory is disposable; the plan file is state.
    assumptions on demand.
 4. Inspect current worktree with `git status --short` and `git diff --stat`.
 5. Mirror open tasks into `todowrite`.
-6. Skip checked implementation todos. Execute only the first unchecked `N.` todo.
+6. Skip checked implementation todos. Execute only the first unchecked `N.` todo;
+   `- [~]` counts as unchecked. Ignore `Learn:` and `Learn state:` fields:
+   implement the whole todo from `Steps`. A `- [~]` todo may hold a seshat
+   skeleton (`TODO("seshat")`, `// TODO(seshat)`): complete it and remove the
+   markers.
 7. Run its listed QA, stop, call `question`, and wait.
 8. On explicit `weiter` / `continue` / `ok` / `go`: checkpoint, mark that todo
    `- [x]`, tell the user to start a NEW session for token savings, print the
@@ -114,8 +118,9 @@ Before stopping after an approved implementation todo:
 - stage the todo's own files with `git add -- <Files>` and verify scope with
   `git diff --cached --name-only`; never run `git stash` while staged plan work
   exists
-- mark only the approved implementation todo checked; remove its `Steps:` and
-  `QA:` lines, retaining its title, `Files:`, and `Acceptance:`
+- mark only the approved implementation todo checked (`- [~]` becomes `- [x]`);
+  remove its `Steps:`, `QA:`, `Learn:`, and `Learn state:` lines, retaining its
+  title, `Files:`, and `Acceptance:`
 
 Checkpoint format:
 

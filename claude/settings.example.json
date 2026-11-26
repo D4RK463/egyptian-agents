@@ -2,6 +2,8 @@
   "permissions": {
     "allow": [
       "Edit(docs/plans/**)",
+      "Read(~/.config/seshat/**)",
+      "Edit(~/.config/seshat/**)",
       "Bash(rg *)",
       "Bash(fd *)"
     ]

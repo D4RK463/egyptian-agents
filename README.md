@@ -1,7 +1,8 @@
 # egyptian-agents
 
 Thot plans, Horus reviews the plan, and Imhotep builds — in opencode or Claude
-Code.
+Code. Seshat builds the same plan with you: she leaves selected backend parts to
+you as learning tasks and coaches you through them.
 
 Modeled on the planner/worker split of
 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), but without
@@ -10,15 +11,22 @@ plan-review gate, not oh-my-openagent's dual review.
 
 ## Prerequisites
 
-All three agents assume these optional/required pieces already exist in
+All agents assume these optional/required pieces already exist in
 opencode or Claude Code. `install.sh` only links files from this repo and the
 installed opencode `caveman` skill.
+
+### opencode version
+
+The opencode agents use the **v1 config format** (`mode`, `permission:` map)
+and only work with opencode v1 for now. Current opencode docs describe a v2
+format (`permissions` rule list, `shell`, `subagent`); compatibility with v2 is
+untested and tracked as a separate task. Claude Code is unaffected.
 
 ### Skills
 
 | Skill | Used by | Why | Required |
 |---|---|---|---|
-| `caveman` | imhotep | Loaded before plan execution. Gates, errors, and final reports stay terse. | yes |
+| `caveman` | imhotep, seshat | Loaded before plan execution. Gates, errors, and final reports stay terse. Seshat's learning messages do not use it. | yes |
 
 Install opencode skills under `~/.agents/skills/<name>/SKILL.md`. Claude Code
 loads skills from `~/.claude/skills/<name>/SKILL.md`; when
@@ -61,7 +69,7 @@ claude mcp add --scope user --transport http context7 https://mcp.context7.com/m
 
 ### Models
 
-All three agents pin their model. The `github-copilot` provider must be
+All agents pin their model. The `github-copilot` provider must be
 authenticated (`opencode auth login`):
 
 | Runtime | Agent | Model |
@@ -72,12 +80,16 @@ authenticated (`opencode auth login`):
 | Claude Code | thot | `opus` |
 | Claude Code | horus | `opus` |
 | Claude Code | imhotep | `sonnet` |
+| opencode | seshat | `github-copilot/claude-opus-5` |
+| Claude Code | seshat | `opus` |
 
 Horus runs on the same tier as thot, not imhotep: a reviewer weaker than the
 plan's author is more likely to miss the fit mismatches and AK gaps it exists
 to catch, and rubber-stamping defeats the gate. Different provider? Change
 `model:` in the relevant agent file. Claude Code variants run on the Anthropic
-subscription; opencode agents remain on `github-copilot`.
+subscription; opencode agents remain on `github-copilot`. Seshat runs on the
+top tier because hints that point at a problem without giving the answer away
+are harder than executing a todo; downgrade if cost becomes an issue.
 
 ### CLI tools
 
@@ -107,6 +119,9 @@ Creates symlinks:
 | `claude/agents/horus.md` | `~/.claude/agents/horus.md` |
 | `claude/agents/imhotep.md` | `~/.claude/agents/imhotep.md` |
 | `claude/agents/research.md` | `~/.claude/agents/research.md` |
+| `claude/agents/seshat.md` | `~/.claude/agents/seshat.md` |
+| `command/start-learning.md` | `~/.config/opencode/command(s)/start-learning.md` |
+| `claude/commands/start-learning.md` | `~/.claude/commands/start-learning.md` |
 | `claude/commands/start-work.md` | `~/.claude/commands/start-work.md` |
 | `claude/commands/review-plan.md` | `~/.claude/commands/review-plan.md` |
 | `~/.agents/skills/caveman` | `~/.claude/skills/caveman` |
@@ -117,6 +132,11 @@ Claude Code step is skipped when `~/.claude` is absent. Paste
 Start Claude Code planning with `claude --agent thot`, review with
 `claude --agent horus`, or execution with `claude --agent imhotep`; use
 `/review-plan <slug>` to review a plan and `/start-work <slug>` to resume it.
+
+It also copies `seshat/logbook.template.md` to
+`~/.config/seshat/logbook.md` when that file is missing (a copy, not a symlink,
+so personal entries never land in this repo) and creates
+`~/.config/seshat/solutions/`.
 
 Idempotent. Aborts if a target exists and is not a matching symlink.
 
@@ -254,6 +274,67 @@ those files.
 - If the plan is wrong, imhotep stops and hands back to thot instead of
   improvising.
 
+## seshat — Teaching worker
+
+Executes the same plans as imhotep, one todo per session, with the same gate,
+checkpoint, final verification, no-commit rule, and scope guard. Start it with
+`claude --agent seshat` / `opencode --agent seshat` and `/start-learning <slug>`.
+
+A todo with a `Learn:` field (written by thot) contains a part you implement:
+
+1. Seshat builds everything outside `You:`.
+2. She creates a compiling skeleton for `You:`: signatures, a not-implemented
+   body marked `seshat`, and numbered `// TODO(seshat) <n>:` comments.
+3. `Check: tests`: she writes the tests first; they are red until your code is
+   right. `Check: solution` (config, migrations, build, infrastructure): she
+   writes a hidden solution under `~/.config/seshat/solutions/`, outside the
+   repo, and compares against it. A different correct solution passes.
+4. The todo becomes `- [~]` with a `Learn state:` line, so a new session can
+   resume it. You implement, then write `check`.
+5. Check loop, one problem at a time:
+
+   | You write | You get |
+   |---|---|
+   | `check` / `prüfen` | stage 1: location only |
+   | `genauer` / `more` | stage 2: location and what is wrong, no code |
+   | `warum` / `why` | stage 3: why, with the codebase's rule and reference |
+   | `zeig lösung` / `show solution` | the solution diff for the current problem |
+   | `mach du` / `you do it` | seshat finishes your part |
+
+6. Passed: normal gate, checkpoint, logbook update.
+
+Skeleton comment detail depends on your level for that pattern in this project:
+`new` = what to do plus a reference `file:line`; `seen` = what to do only;
+`confident` = the goal only. Learning messages use fixed templates in plain
+language (next action first, at most 5 items, no preamble or recap; adapted
+from [i-have-adhd](https://github.com/ayghri/i-have-adhd), MIT); gates and
+checkpoints stay caveman-terse.
+
+### Learning logbook
+
+`~/.config/seshat/logbook.md` is a private, global record across all projects:
+per backend pattern (e.g. `rest-endpoint`, `flyway-migration`) how often you
+implemented it yourself, when you last did, and a reference per project. Its
+`## Rules` header is the single source for levels: Done 0 = `new`, 1–2 =
+`seen`, ≥3 or self-reported = `confident`; 90 days without practice drops one
+level; a pattern you have not done in the current project counts as `new` there.
+
+- **thot** reads it, asks which unknown patterns you already know (multi-select)
+  and appends those answers, then plans learning todos: budget
+  `max(1, ceil(implementation todos / 4))`, priority `new` -> decayed -> `seen`,
+  only where a reference exists in the repo or earlier in the plan. Opt out
+  with `keine Lernaufgaben` / `no learning`.
+- **seshat** counts a pattern only when you passed without `zeig lösung` /
+  `mach du`, and records patterns she built as references for later plans.
+- **horus** checks learning todos (reference exists, scope excludes tests and
+  frontend, check mode fits, budget) but never reads the logbook.
+- **imhotep** ignores `Learn:` and builds those todos completely, so any plan
+  can still run at full speed.
+
+The logbook never enters plan files, review contexts, or the repository: plans
+carry only pattern ids, `You:` scope, reference, and check mode. Tests and
+frontend are never learning scope.
+
 ## Claude Code variant
 
 `claude/agents/thot.md`, `claude/agents/horus.md`, and
@@ -262,6 +343,9 @@ Edit the opencode and Claude Code file of each agent together on prompt
 changes; no generator or shared body keeps either pair synchronized.
 `claude/agents/research.md` / `agent/research.md` are the same pair for the
 `research` subagent, wired into both thot and horus.
+`claude/agents/seshat.md` / `agent/seshat.md` are the pair for seshat; her
+deltas mirror imhotep's, and the opencode variant has no repository-records
+section, like opencode imhotep.
 
 `claude/commands/start-work.md` resumes plans with `/start-work <slug>`, and
 `claude/commands/review-plan.md` runs the horus gate with
@@ -318,8 +402,8 @@ abort before review or execution.
 ### Claude Code
 
 Start a separate session with the required agent: `claude --agent thot` for
-planning, `claude --agent horus` for review, or `claude --agent imhotep` for
-execution. Claude Code's `--agent` option applies to that session; do not use
+planning, `claude --agent horus` for review, or `claude --agent imhotep` /
+`claude --agent seshat` for execution. Claude Code's `--agent` option applies to that session; do not use
 `/review-plan` or `/start-work` from a Thot session. Horus's and imhotep's
 identity guards abort before review or execution if they are not the active
 agent.
@@ -369,6 +453,11 @@ The horus-review file carries exactly one `Verdict:` line, `APPROVED` or
 found. It is disposable state, not a decision record: thot deletes it on every
 amendment, and horus rewrites it from scratch on every review.
 
+Learning todos add a `Learn:` block (pattern ids, `You:`, `Reference:`,
+`Check: tests | solution`). While seshat waits for you, a todo is `- [~] N.`
+with a `Learn state:` line; both count as open, and the checkpoint removes
+them.
+
 Task lines must be exactly `- [ ] N.` or `- [ ] F<n>.` at column 0. Target 5–8
 implementation todos. Implementation and test are one todo.
 
@@ -397,6 +486,9 @@ Current execution rule summary:
 | Horus gate (optional; imhotep refuses only on `Verdict: CHANGES_REQUESTED`) | soft: prompt-only file check, same enforcement class as the identity guards |
 | caveman style, step gate, fresh-session flow, scope guard, final-verification flow | soft model instruction |
 | `## Execution rules` in the plan | soft, but survives compaction |
+| Logbook privacy (never copied into plans or the repo) | soft: prompt-only; `install.sh` copies instead of symlinking |
+| thot logbook write in opencode | `edit` allows `~/.config/seshat/logbook.md`; whether v1 matches `~` paths is untested |
+| Claude Code logbook access | `Read`/`Edit(~/.config/seshat/**)` in `settings.example.json` applies to every session, not only thot and seshat |
 
 OpenCode commit lock is real. Claude Code commit lock is prompt-only. Other core
 rules are discipline, so they live both in the agent prompt and every plan.
